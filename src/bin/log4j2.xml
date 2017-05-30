@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Null name="null"/>
+        <Console name="stdout" target="SYSTEM_OUT">
+            <PatternLayout pattern="%p\t%d{ISO8601}\t%r\t%c{1}\t[%t]\t%m%n"/>
+        </Console>
+        <Console name="stderr" target="SYSTEM_ERR">
+            <PatternLayout pattern="%p\t%d{ISO8601}\t%r\t%c{1}\t[%t]\t%m%n"/>
+        </Console>
+        <File name="fileOutput" fileName="adls-java-sdk.log">
+            <PatternLayout pattern="%p\t%d{ISO8601}\t%r\t%c{1}\t[%t]\t%m%n"/>
+        </File>
+        <RollingFile name="rollingFile" fileName="adls-java-sdk-rfa.log"
+                     filePattern="%d{yyyy-MM}/adls-java-sdk-%d{dd-MM-yyyy}-%i.log.gz">
+            <PatternLayout pattern="%p\t%d{ISO8601}\t%r\t%c{1}\t[%t]\t%m%n"/>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+                <TimeBasedTriggeringPolicy />   <!-- equivalent to daily rollover -->
+                <SizeBasedTriggeringPolicy size="250 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="100"/>   <!-- keep max of 100 files around -->
+        </RollingFile>
+    </Appenders>
+
+
+    <Loggers>
+        <Logger name="com.microsoft.azure.datalake.store" level="warn" additivity="false">
+            <AppenderRef ref="stdout"/>
+        </Logger>
+        <Root level="warn">
+            <AppenderRef ref="stdout"/>
+        </Root>
+    </Loggers>
+</Configuration>

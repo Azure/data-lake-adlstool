@@ -1,0 +1,5 @@
+#!/bin/bash
+
+TOOLPATH="`dirname $0`"
+java -cp "$TOOLPATH:$TOOLPATH/*" com.microsoft.azure.datalake.store.AdlsTool $@
+
