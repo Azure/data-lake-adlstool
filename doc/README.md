@@ -1,6 +1,8 @@
 # Apply ACLs recursively 
 
-This utility allows users to recursively apply ACLs to their folders & files in [Azure Data Lake Store](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-overview). The tool is purpose built to solve the specific problem of applying recursive ACLs and in the future we plan to integrate this into our SDKs and CLI tools. 
+This utility allows users to recursively apply ACLs to their folders & files in [Azure Data Lake Store](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-overview). The tool is purpose built to solve the specific problem of applying recursive ACLs and in the future we plan to integrate this into our SDKs and CLI tools.
+
+You can download the latest version of this tool from [here](http://aka.ms/adlstool-download) 
 
 ## Pre-Requisites 
 
@@ -19,7 +21,7 @@ To use this tool, it is best to have the following information and setup. If you
 
 ## Installing the tool 
 
-The ACL tool is available for both Windows and Linux, you can download the tool from [here]  (http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
+The ACL tool is available for both Windows and Linux, you can download the tool from [here] (http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
 
 ## Command line options
 
