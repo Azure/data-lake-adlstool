@@ -16,7 +16,7 @@ To use this tool, it is best to have the following information and setup. If you
 
 * Object IDs for the users, groups or service principals who need be part of the ACL entry, these ObjectIDs can be obtained from the portal or one of the Azure CLIs. 
 
-* Ensure that you have the right persmissions to run this tool. Users of this tool, should have access to the Azure Data Lake Store account with the right permissions. Only users and service principals that are the [owning user](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-access-control#the-owning-user) of the files and folders can apply ACLs to the file and folders in the account. Additionally [super-users](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-access-control#the-super-user) have RWX permissions to all files & they can change permissions on any file. 
+* Ensure that you have the right persmissions to run this tool. Only users and service principals that are the [owning user](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-access-control#the-owning-user) of the files and folders can apply ACLs to the file and folders in the account. Additionally [super-users](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-access-control#the-super-user) have RWX permissions to all files & they can change permissions on any file. 
 
 
 ## Installing the tool 
