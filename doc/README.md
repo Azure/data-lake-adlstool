@@ -17,9 +17,35 @@ To use this tool, it is best to have the following information and setup. If you
 * Object IDs for the users, groups or service principals who need be part of the ACL entry, these ObjectIDs can be obtained from the portal or one of the Azure CLIs. 
 
 
-## Command-Line Options for the Tool 
+## Installing the tool 
 
-TODO : Need to fill up this section once we finalize on the tool input, talk to Atul about this. 
+The ACL tool is available for both Windows and Linux, you can download the tool from [here]  (http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
+
+## Command line options
+
+```
+ADLS Java command-line tool
+Usage:
+  adlstool <modifyacl|removeacl> <credfile> <path> "<aclspec>"
+
+
+Where <credfile> is the path to a java property file that contains the following properties:
+  account= fully qualified domain name of the Azure Data Lake Store account
+  credtype= the type of credential; one of clientcredentials or refreshtoken
+
+For clientcredentials, provide these three values:
+  authurl= the OAuth2 endpoint from AAD
+  clientid= the application ID
+  credential= the (secret) key
+
+For refreshtoken, provide these two values:
+  clientid= the ID of the user
+  refreshtoken= the refresh token
+```
+
+The step by step guide below, walkthrough how to use this tool in detail and how to obtain the right set of inputs used by the tool. 
+
+
 
 ## Step by Step guide  
 
@@ -131,7 +157,7 @@ We will use this string in running the tool.
 We now all the information needed to run the tool. From a Terminal/Shell/Command Line on your computer, run 
 
 ```
-java -jar <tooljarfilename> modify newcred.cred "\rectest2" user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x
+adlstool modifyacl newcred.cred "\rectest2" user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x
 ```
 
 Once the tool successfully completes, you ACLs have been applied, we expected <10 mins to apply ACLs to ~ 1 million objects. You can use the Azure Portal to verify that the ACLs have been set by check a sample of file and folders in your path. 
