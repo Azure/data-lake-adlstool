@@ -10,13 +10,13 @@ To use this tool, it is best to have the following information and setup. If you
 
 * Installation of Java on the machine where this tool is run. You can find installation instruction for Java [here](https://www.java.com/en/download/help/download_options.xml)
 
-* Users of this tool, should have access to the Azure Data Lake Store account with Owner permissions. Once users and service principals that are "owners" can apply ACLs to the file and folders in the account. 
-
 * Information related the Service Principal (Object ID, Password) & the OAUTH 2.0 Token endpoint for the subscription. 
 
 * Azure Data Lake store is an HDFS file system. Understanding of the ACLs in HDFS and how ACL strings are constructed is helpful. Example: "user::rwx,user:foo:rw-,group::r--,other::---" You can read more about it [here](https://hadoop.apache.org/docs/r2.6.3/api/org/apache/hadoop/fs/permission/AclEntry.html)
 
 * Object IDs for the users, groups or service principals who need be part of the ACL entry, these ObjectIDs can be obtained from the portal or one of the Azure CLIs. 
+
+* Ensure that you have the right persmissions to run this tool. Users of this tool, should have access to the Azure Data Lake Store account with the right permissions. Only users and service principals that are the [owning user](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-access-control#the-owning-user) of the files and folders can apply ACLs to the file and folders in the account. Additionally [super-users](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-access-control#the-super-user) have RWX permissions to all files & they can change permissions on any file. 
 
 
 ## Installing the tool 
