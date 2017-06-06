@@ -53,6 +53,10 @@ class SetAcls
 
         try {
             client = getClient(readPropertiesFile(args[1]));
+            String toolVersion = AdlsTool.class.getPackage().getImplementationVersion();
+            if (toolVersion == null) toolVersion = "UnknownVersion";
+            ADLStoreOptions options = new ADLStoreOptions().setUserAgentSuffix("AdlsTool-"+ toolVersion + "/" + op.toString());
+            client.setOptions(options);
         } catch (FileNotFoundException ex) {
             System.out.println("Credential file not found: " + args[1]);
             usage(2011);
