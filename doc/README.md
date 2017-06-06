@@ -21,7 +21,7 @@ To use this tool, it is best to have the following information and setup. If you
 
 ## Installing the tool 
 
-The ACL tool is available for both Windows and Linux, you can download the tool from [here] (http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
+The ACL tool is available for both Windows and Linux, you can download the tool from [here](http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
 
 ## Command line options
 
