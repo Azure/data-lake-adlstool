@@ -110,18 +110,26 @@ public class RecursiveAclProcessor {
             try {
                 Payload payload;
                 while ((payload = queue.poll()) != null) {
-                    if (payload.type == PayloadType.PROCESS_DIRECTORY) {
-                        processDirectoryTree(payload.de.fullName);
-                    } else if (payload.type == PayloadType.MODIFY_ACL_FOR_SINGLE_ENTRY) {
-                        client.modifyAclEntries(payload.de.fullName, aclSpec);
-                    } else if (payload.type == PayloadType.SET_ACL_FOR_SINGLE_ENTRY) {
-                        client.setAcl(payload.de.fullName, aclSpec);
-                    } else if (payload.type == PayloadType.REMOVE_ACL_FOR_SINGLE_ENTRY) {
-                        client.removeAclEntries(payload.de.fullName, aclSpec);
+                    try {
+                        if (payload.type == PayloadType.PROCESS_DIRECTORY) {
+                            processDirectoryTree(payload.de.fullName);
+                        } else if (payload.type == PayloadType.MODIFY_ACL_FOR_SINGLE_ENTRY) {
+                            client.modifyAclEntries(payload.de.fullName, aclSpec);
+                        } else if (payload.type == PayloadType.SET_ACL_FOR_SINGLE_ENTRY) {
+                            client.setAcl(payload.de.fullName, aclSpec);
+                        } else if (payload.type == PayloadType.REMOVE_ACL_FOR_SINGLE_ENTRY) {
+                            client.removeAclEntries(payload.de.fullName, aclSpec);
+                        }
+                    } catch (ADLException ex) {
+                        if (ex.httpResponseCode == 404) {
+                            // swallow - the file or directory got deleted after we enumerated it
+                        } else {
+                            throw ex;
+                        }
+                    } finally {
+                        queue.unregister();
+                        if (opCountForProgressBar.incrementAndGet() % 1000 == 0) System.out.print('.');
                     }
-                    queue.unregister();
-                    if(opCountForProgressBar.incrementAndGet() % 1000 == 0) System.out.print('.');
-
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
