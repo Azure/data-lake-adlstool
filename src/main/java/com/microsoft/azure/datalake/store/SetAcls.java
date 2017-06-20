@@ -70,7 +70,7 @@ class SetAcls
         try {
             acl = AclEntry.parseAclSpec(args[3]);
         } catch (Exception ex) {
-            System.out.println("Illegal ACLSpec specified: " + args[2]);
+            System.out.println("Illegal ACLSpec specified: " + args[3]);
             usage(1003);
         }
 

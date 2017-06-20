@@ -8,11 +8,15 @@
 package com.microsoft.azure.datalake.store;
 
 import com.microsoft.azure.datalake.store.acl.AclEntry;
+import com.microsoft.azure.datalake.store.acl.AclScope;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 
 import java.io.IOException;
+import java.security.acl.Acl;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -24,32 +28,37 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RecursiveAclProcessor {
 
     private enum PayloadType {
-        PROCESS_DIRECTORY,
         MODIFY_ACL_FOR_SINGLE_ENTRY,
         SET_ACL_FOR_SINGLE_ENTRY,
         REMOVE_ACL_FOR_SINGLE_ENTRY,
+        PROCESS_DIRECTORY,
     }
 
-    private class Payload {
+    private class Payload implements Comparable<Payload> {
         public PayloadType type;
         public DirectoryEntry de;
         public Payload(PayloadType type, DirectoryEntry de) {
             this.type = type;
             this.de = de;
         }
+
+        @Override
+        public int compareTo(Payload that) {
+            return this.type.ordinal() - that.type.ordinal();
+        }
     }
 
 
     private AdlAclOperation op;
-    private final ProcessingQueue<Payload> queue = new ProcessingQueue<>();
+    private final ProcessingQueue2<Payload> queue = new ProcessingQueue2<>();
     private ADLStoreClient client;
     private AtomicInteger opCountForProgressBar = new AtomicInteger(0);
 
-    private static final int NUM_THREADS = 200;
     private static final int ENUMERATION_PAGESIZE = 16000;
 
     private String path;
     private List<AclEntry> aclSpec;
+    private List<AclEntry> aclSpecForFiles = new LinkedList<>();
 
     // for stats
     private AtomicLong fileCount = new AtomicLong(0);
@@ -79,6 +88,13 @@ public class RecursiveAclProcessor {
         this.path = path;
         this.aclSpec = aclSpec;
         this.op = op;
+
+        for (AclEntry e : aclSpec) {
+            if (e.scope == AclScope.ACCESS) {
+                this.aclSpecForFiles.add(e);
+            }
+        }
+
         DirectoryEntry de = client.getDirectoryEntry(path);
         if (de.type == DirectoryEntryType.FILE) {
             processFile(de);
@@ -86,9 +102,24 @@ public class RecursiveAclProcessor {
             processDirectory(de);
         }
 
+        // Determine the number of threads to use
+        int numThreads = Runtime.getRuntime().availableProcessors() * 10; // heuristic: 10 times number of processors
+        Properties p = System.getProperties();
+        String threadStr = p.getProperty("adlstool.threads");
+        if (threadStr != null) {
+            try {
+                numThreads = Integer.parseInt(threadStr);
+            } catch (NumberFormatException ex) {
+                System.out.println("Illegal threadcount in system property adlstool.threads : " + threadStr);
+                System.exit(1008);
+            }
+        }
+        System.setProperty("http.keepAlive", "true");
+        System.setProperty("http.maxConnections", (new Integer(numThreads)).toString());
+
         // Start threads in the processing thread-pool
-        Thread[] threads = new Thread[NUM_THREADS];
-        for (int i = 0; i < NUM_THREADS; i++) {
+        Thread[] threads = new Thread[numThreads];
+        for (int i = 0; i < numThreads; i++) {
             threads[i] = new Thread(new RecursiveAclProcessor.ThreadProcessor());
             threads[i].start();
         }
@@ -104,6 +135,9 @@ public class RecursiveAclProcessor {
         return new RecursiveAclProcessorStats(fileCount.get(), directoryCount.get());
     }
 
+
+
+
     private class ThreadProcessor  implements Runnable {
 
         public void run() {
@@ -114,11 +148,23 @@ public class RecursiveAclProcessor {
                         if (payload.type == PayloadType.PROCESS_DIRECTORY) {
                             processDirectoryTree(payload.de.fullName);
                         } else if (payload.type == PayloadType.MODIFY_ACL_FOR_SINGLE_ENTRY) {
-                            client.modifyAclEntries(payload.de.fullName, aclSpec);
+                            if (payload.de.type == DirectoryEntryType.FILE) {
+                                client.modifyAclEntries(payload.de.fullName, aclSpecForFiles);
+                            } else {
+                                client.modifyAclEntries(payload.de.fullName, aclSpec);
+                            }
                         } else if (payload.type == PayloadType.SET_ACL_FOR_SINGLE_ENTRY) {
-                            client.setAcl(payload.de.fullName, aclSpec);
+                            if (payload.de.type == DirectoryEntryType.FILE) {
+                                client.setAcl(payload.de.fullName, aclSpecForFiles);
+                            } else {
+                                client.setAcl(payload.de.fullName, aclSpec);
+                            }
                         } else if (payload.type == PayloadType.REMOVE_ACL_FOR_SINGLE_ENTRY) {
-                            client.removeAclEntries(payload.de.fullName, aclSpec);
+                            if (payload.de.type == DirectoryEntryType.FILE) {
+                                client.removeAclEntries(payload.de.fullName, aclSpecForFiles);
+                            } else {
+                                client.removeAclEntries(payload.de.fullName, aclSpec);
+                            }
                         }
                     } catch (ADLException ex) {
                         if (ex.httpResponseCode == 404) {
@@ -166,7 +212,7 @@ public class RecursiveAclProcessor {
     }
 
     private void processFile(DirectoryEntry de) {
-        enqueueAclChange(de);
+        if (aclSpecForFiles.size() != 0) enqueueAclChange(de);
         fileCount.incrementAndGet();
     }
 
