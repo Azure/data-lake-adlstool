@@ -73,7 +73,7 @@ In order to run the tool, you need some information to get started including ser
 
 #### Service Principal 
 
-We will use a Service Principal to to allow the tool to access the Azure Data Lake Store account, this service principal needs to be an owner for the ADLS account in order to perform the operation of applying ACLs. If you already have a service principal - note down the <ApplicationID> and the <Password> for the service principal. 
+We will use a Service Principal to to allow the tool to access the Azure Data Lake Store account, this service principal needs to be an owner for the ADLS account in order to perform the operation of applying ACLs. If you already have a service principal - note down the "ApplicationID" and the "Password" for the service principal. 
 
 To create a Service Principal from the Azure CLI 2.0, ensure that you have the CLI 2.0 installed on your machine. From a terminal/shell/command prompt run 
 
@@ -166,13 +166,13 @@ Once the tool successfully completes, you ACLs have been applied, we expected <1
 
 ## Best Practices & FAQ
 
-**Performance** For best performance, we recommend running this tool in an Azure VM that is in the same region your Azure Data Lake Store Account. This tool creates multiple threads on the client and then executes commands on each of those threads to set ACLs on every file. This latency of access to the Azure Data Lake Store account will determine the performance (in the time domain) of the tool. 
+**Performance** For best performance, we recommend runningitg this tool in an Azure VM that is in the same region your Azure Data Lake Store Account. This tool creates multiple threads on the client and then executes commands on each of those threads to set ACLs on every file. This latency of access to the Azure Data Lake Store account will determine the performance (in the time domain) of the tool. 
 
 **Credentials** We recommend using a Service Principal as the authentication mechanism, ideally you want to scope the Role of the Service Principal to just your ADLS account to ensure the highest security. 
 
 **ACL Limits** This is maximum limit to the number of ACLs that you can apply to a file/folder. At the time of publishing this document, it is limited to 32 access ACLs and 32 default ACLs. You can find the most current documentation about this [here](https://docs.microsoft.com/en-us/azure/azure-subscription-service-limits#data-lake-store-limits)
 
-**Handling run-time rrrors** It is possible that the tool may fail while running, this may happen because we had an outage or more likely that something went wrong on your client machine, such as - machine went to sleep, machine lose internet connectivity. The tool is designed to stop at first failure. The best practice for the recovery is to re-run the tool with the same options. If an ACL has already been applied, re-applying that same ACL won't have any negative impact. 
+**Handling run-time Errors** It is possible that the tool may fail while running, this may happen because we had an outage or more likely that something went wrong on your client machine, such as - machine went to sleep, machine lose internet connectivity. The tool is designed to stop at first failure. The best practice for the recovery is to re-run the tool with the same options. If an ACL has already been applied, re-applying that same ACL won't have any negative impact. 
 
 **403 Errors** If you see HTTP403 AccessControlExceptions
 
