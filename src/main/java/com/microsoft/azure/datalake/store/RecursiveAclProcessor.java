@@ -12,7 +12,6 @@ import com.microsoft.azure.datalake.store.acl.AclScope;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 
 import java.io.IOException;
-import java.security.acl.Acl;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -49,7 +48,7 @@ public class RecursiveAclProcessor {
     }
 
 
-    private AdlAclOperation op;
+    private RequestedOperation op;
     private final ProcessingQueue2<Payload> queue = new ProcessingQueue2<>();
     private ADLStoreClient client;
     private AtomicInteger opCountForProgressBar = new AtomicInteger(0);
@@ -74,16 +73,16 @@ public class RecursiveAclProcessor {
      * @param client {@code ADLStoreClient} object to use
      * @param path the root of the path to set ACLs for
      * @param aclSpec the ACL list to apply
-     * @param op {@link AdlAclOperation} enum value specifying the operation to perform
+     * @param op {@link RequestedOperation} enum value specifying the operation to perform
      * @return {@link RecursiveAclProcessorStats} object containing stats of the run
      * @throws IOException throws {@link IOException} if there is an error
      */
-    public static RecursiveAclProcessorStats processRequest(ADLStoreClient client, String path, List<AclEntry> aclSpec, AdlAclOperation op) throws IOException {
+    public static RecursiveAclProcessorStats processRequest(ADLStoreClient client, String path, List<AclEntry> aclSpec, RequestedOperation op) throws IOException {
         RecursiveAclProcessor p = new RecursiveAclProcessor();
         return p.processRequestInternal(client, path, aclSpec, op);
     }
 
-    private RecursiveAclProcessorStats processRequestInternal(ADLStoreClient client, String path, List<AclEntry> aclSpec, AdlAclOperation op) throws IOException {
+    private RecursiveAclProcessorStats processRequestInternal(ADLStoreClient client, String path, List<AclEntry> aclSpec, RequestedOperation op) throws IOException {
         this.client = client;
         this.path = path;
         this.aclSpec = aclSpec;
@@ -217,11 +216,11 @@ public class RecursiveAclProcessor {
     }
 
     private void enqueueAclChange(DirectoryEntry de) {
-        if (this.op == AdlAclOperation.modifyacl) {
+        if (this.op == RequestedOperation.modifyacl) {
             queue.add(new Payload(PayloadType.MODIFY_ACL_FOR_SINGLE_ENTRY, de)); // queue the task to setacl ACL on this directory
-        } else if (this.op == AdlAclOperation.setacl) {
+        } else if (this.op == RequestedOperation.setacl) {
             queue.add(new Payload(PayloadType.SET_ACL_FOR_SINGLE_ENTRY, de)); // queue the task to setacl ACL on this directory
-        } else if (this.op == AdlAclOperation.removeacl) {
+        } else if (this.op == RequestedOperation.removeacl) {
             queue.add(new Payload(PayloadType.REMOVE_ACL_FOR_SINGLE_ENTRY, de)); // queue the task to setacl ACL on this directory
         }
     }
