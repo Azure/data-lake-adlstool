@@ -13,8 +13,8 @@ class EnumerateFile implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
 	private ProcessingQueue<MetaData> metaDataQ;
 	private ConsumerQueue<UploadJob> jobQ;
-	private static final int chunkSize = 16 * 1024 * 1024; // 256 MB
-	private static final int threshhold = 20 * 1024 * 1024; // 350 MB
+	private static final int chunkSize = 256 * 1024 * 1024; // 256 MB
+	private static final int threshhold = 350 * 1024 * 1024; // 350 MB
 	
 	EnumerateFile(File srcDir, String destination, ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ) {
 		this.metaDataQ = metaDataQ;
@@ -67,7 +67,7 @@ class EnumerateFile implements Runnable {
 			jobQ.add(new UploadJob(front, offset, size, chunks, JobType.FILEUPLOAD));
 			chunks++;
 		}
-		log.debug("Generated " + front.splits + " number of upload jobs for file " + front.getSourceFileName() + " with destination " + front.getDstUploadPath());
+		log.debug("Generated " + front.splits + " number of upload jobs for file " + front.getSourceFilePath() + " with destination " + front.getDstUploadPath());
 	}
 	
 	private long getNumberOfFileChunks(long size) {

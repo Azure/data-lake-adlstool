@@ -4,7 +4,7 @@ import java.util.Queue;
 class ConsumerQueue<T> {
 	Queue<T> dataQ;
 	private boolean producerActive;
-	int capacity = 256;
+	int capacity = 1000 * 1000;
 	
 	ConsumerQueue(Queue<T> inQ) {
 		dataQ = inQ;

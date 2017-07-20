@@ -102,19 +102,7 @@ public class RecursiveAclProcessor {
         }
 
         // Determine the number of threads to use
-        int numThreads = Runtime.getRuntime().availableProcessors() * 10; // heuristic: 10 times number of processors
-        Properties p = System.getProperties();
-        String threadStr = p.getProperty("adlstool.threads");
-        if (threadStr != null) {
-            try {
-                numThreads = Integer.parseInt(threadStr);
-            } catch (NumberFormatException ex) {
-                System.out.println("Illegal threadcount in system property adlstool.threads : " + threadStr);
-                System.exit(1008);
-            }
-        }
-        System.setProperty("http.keepAlive", "true");
-        System.setProperty("http.maxConnections", (new Integer(numThreads)).toString());
+        int numThreads = AdlsTool.threadSetup();
 
         // Start threads in the processing thread-pool
         Thread[] threads = new Thread[numThreads];

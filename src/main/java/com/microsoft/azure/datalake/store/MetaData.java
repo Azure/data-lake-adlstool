@@ -20,7 +20,7 @@ class MetaData {
 		sourceFileName = sourceFile.getName();
 	}
 	
-	public String getSourceFileName() {
+	public String getSourceFilePath() {
 		return sourceFile.getAbsolutePath();
 	}
 	/*

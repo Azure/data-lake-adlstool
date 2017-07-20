@@ -3,6 +3,7 @@ package com.microsoft.azure.datalake.store;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.PriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +15,7 @@ import com.microsoft.azure.datalake.store.DirectoryEntryType;
 
 public class FileUploader {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
-	private static int uploaderThreadCount = 512;
+	private static int uploaderThreadCount;
 	private ProcessingQueue<MetaData> metaDataQ;
 	private ConsumerQueue<UploadJob> jobQ;
 	private ADLStoreClient client;
@@ -68,6 +69,7 @@ public class FileUploader {
 	private void initialize(ADLStoreClient client) {
 		metaDataQ = new ProcessingQueue<MetaData>();
 		jobQ = new ConsumerQueue<UploadJob>(new PriorityQueue<UploadJob>());
+		uploaderThreadCount = AdlsTool.threadSetup();
 		this.client = client;
 	}
 	

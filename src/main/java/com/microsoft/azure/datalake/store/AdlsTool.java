@@ -124,13 +124,35 @@ class AdlsTool {
             return String.format("%d seconds", displayseconds);
         }
     }
+    
+    public static int threadSetup() {
+        // Determine the number of threads to use
+        int numThreads = Runtime.getRuntime().availableProcessors() * 10; // heuristic: 10 times number of processors
+        Properties p = System.getProperties();
+        String threadStr = p.getProperty("adlstool.threads");
+        if (threadStr != null) {
+            try {
+                numThreads = Integer.parseInt(threadStr);
+            } catch (NumberFormatException ex) {
+                System.out.println("Illegal threadcount in system property adlstool.threads : " + threadStr);
+                System.exit(1008);
+            }
+        }
+        System.setProperty("http.keepAlive", "true");
+        System.setProperty("http.maxConnections", (new Integer(numThreads)).toString());
+    	return numThreads;
+    }
 
     public static void usage(int exitCode) {
         System.out.println();
         System.out.println("ADLS Java command-line tool");
         System.out.println("Usage:");
         System.out.println("  adlstool <modifyacl|removeacl> <credfile> <path> \"<aclspec>\"");
+        System.out.println("  adlstool upload <credfile> <sourcePath> <destinationPath>");
         System.out.println();
+        System.out.println("For upload:");
+        System.out.println("  sourcePath= local path to a file or directory to be uploaded");
+        System.out.println("  destinationPath= path to a directory on ADLS to upload the file/directory to");
         System.out.println();
         System.out.println("Where <credfile> is the path to a java property file that contains the following properties:");
         System.out.println("  account= fully qualified domain name of the Azure Data Lake Store account");

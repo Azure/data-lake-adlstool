@@ -1,11 +1,13 @@
 package com.microsoft.azure.datalake.store;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +106,7 @@ class JobExecutor implements Runnable {
 					log.error(e.getMessage());
 				}
 			} else {
-				log.error("Upload failed: source file path " + job.data.getSourceFileName());
+				log.error("Upload failed: source file path " + job.data.getSourceFilePath());
 			}
 			stats.addUploadedItem(job, status);
 		}
@@ -125,13 +127,16 @@ class JobExecutor implements Runnable {
 	            totalBytesRead += dataRead;
 	        }
 	        if(totalBytesRead != job.size) {
+	        	log.error("Failed to upload: " + job.data.getSourceFilePath());
 	           return false;
 	        }
 		} catch (IOException e) {
+			log.error(e.getMessage());
 			return false;
 		}
 		return true;
 	}
+	
 	
 	boolean concatenate(UploadJob job) {
 		if(!job.data.isSplitUpload()) return true;
@@ -139,16 +144,11 @@ class JobExecutor implements Runnable {
 		String finalDestination = job.getDstFinalPath();
 		List<String> chunkedFiles = job.data.getChunkFiles();
 		try {
+			client.delete(finalDestination);
 			status = client.concatenateFiles(finalDestination, chunkedFiles);
 		} catch (IOException e) {
-			// The final destination already contains a file with the same name. Replace it.
-			log.debug("Replacing an already existing file: " + finalDestination);
-			try {
-				client.delete(finalDestination);
-				status = client.concatenateFiles(finalDestination, chunkedFiles);
-			} catch (IOException e1) {
-				log.error("Concatenation failed, sourcefile: " + finalDestination);
-			}
+			log.error(e.getMessage());
+			log.error("Concatenation failed, failed to upload: " + finalDestination);
 		}
 		return status;
 	}
@@ -161,7 +161,7 @@ class JobExecutor implements Runnable {
 		String filePath = job.getDstFinalPath();
 		DirectoryEntry entry = client.getDirectoryEntry(filePath);
 		if(entry.length != job.data.sourceFile.length()) {
-			log.error(job.data.sourceFile.getAbsolutePath() + " verification failed");
+			log.error(job.data.sourceFile.getAbsolutePath() + " final verification failed");
 			return false;
 		}
 		log.debug(job.getSourcePath() + " verification successful");
