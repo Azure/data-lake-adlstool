@@ -29,9 +29,14 @@ public class UploaderMain {
             long start = System.currentTimeMillis();
             UploadResult R = FileUploader.upload(srcPath, dstPath, client);
             long stop = System.currentTimeMillis();
-            System.out.println("COMPLETE");
+            AdlsTool.resetCipher();
+            if(R.success) {
+            	System.out.println("SUCCESSFULLY COMPLETE");
+            } else {
+            	System.out.println("UPLOAD FAILED");
+            }
             System.out.println("# of Files Uploaded: " + R.successfulUploads.size());
-            System.out.println("# of Files Upload Failed: " + R.failedUplaods.size());
+            System.out.println("# of Failed Uploads: " + R.failedUplaods.size());
             System.out.println("Total number of Bytes uploaded " + R.totalSizeInBytes);
             System.out.println("Time taken: " + AdlsTool.timeString(stop - start));
         } catch (Exception ex) {
