@@ -140,6 +140,7 @@ class AdlsTool {
         }
         System.setProperty("http.keepAlive", "true");
         System.setProperty("http.maxConnections", (new Integer(numThreads)).toString());
+//        System.setProperty("https.cipherSuites", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA");
     	return numThreads;
     }
 

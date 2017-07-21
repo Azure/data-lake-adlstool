@@ -4,15 +4,17 @@ import java.io.IOException;
 
 public class UploaderMain {
 	static final int numberOfArguments = 4;
+	
+	
     public static void main(RequestedOperation op, ADLStoreClient client, String[] args ) {
-        if (args.length != numberOfArguments) {
+        if (args.length < numberOfArguments) {
             System.out.println("Illegal number of command-line parameters: " + args.length);
             AdlsTool.usage(1000);
         }
 
         String srcPath = args[2].trim();
         String dstPath = args[3].trim();
-
+        
         if (srcPath == null || srcPath.length() == 0) {
             System.out.println("Illegal number of command-line parameters: " + args.length);
             AdlsTool.usage(1200);

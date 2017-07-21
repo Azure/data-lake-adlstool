@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -91,8 +94,7 @@ class JobExecutor implements Runnable {
 	}
 	
 	void uploadFile(UploadJob job){
-		String filePath = job.getDstUploadPath();
-		boolean status = uploadFileInternal(job, filePath);
+		boolean status = uploadFileInternal(job);
 		job.updateSuccess(status);
 		stats.updateChunkStats(status, job.size);
 		if(job.isFinalUpload()) {
@@ -112,22 +114,33 @@ class JobExecutor implements Runnable {
 		}
 	}
 	
-	boolean uploadFileInternal(UploadJob job, String filePath) {
-		try ( OutputStream stream = client.createFile(filePath, IfExists.OVERWRITE);
-		        InputStream srcData = new FileInputStream(job.data.sourceFile);)
+	boolean uploadFileInternal(UploadJob job) {
+		String filePath = job.getDstUploadPath();
+		try ( ADLFileOutputStream stream = client.createFile(filePath, IfExists.OVERWRITE);
+				FileInputStream srcData = new FileInputStream(job.data.sourceFile);)
 		{
-			byte[] buf = new byte[bufSize];
+			byte[] data = new byte[bufSize];
+			ByteBuffer buf = ByteBuffer.wrap(data);
+			
 	        long totalBytesRead = 0;
-	        int dataRead = 0;
-	          
-	        srcData.skip(job.offset);
+	        long dataRead = 0;
+	       // srcData.skip(job.offset);
+	        FileChannel Fc = srcData.getChannel();
+	        //Fc.position(job.offset);
+	        Fc.map(FileChannel.MapMode.READ_ONLY, job.offset, job.size);
+	        buf.clear();
+	        
 	        while(totalBytesRead < job.size && 
-	        		(dataRead = srcData.read(buf, 0, (int)Math.min(bufSize, job.size - totalBytesRead))) != -1) {
-	        	stream.write(buf, 0, dataRead);
-	            totalBytesRead += dataRead;
+	        		(dataRead = Fc.read(buf)) != -1) {
+	        	int r = (int)Math.min(dataRead, job.size - totalBytesRead);
+	        	//log.error("Read data " + r);
+	        	stream.write(data, 0, r);
+	            totalBytesRead += r;
+	            buf.clear();
 	        }
+	        Fc.close();
 	        if(totalBytesRead != job.size) {
-	        	log.error("Failed to upload: " + job.data.getSourceFilePath());
+	           log.error("Failed to upload: " + job.data.getSourceFilePath());
 	           return false;
 	        }
 		} catch (IOException e) {
