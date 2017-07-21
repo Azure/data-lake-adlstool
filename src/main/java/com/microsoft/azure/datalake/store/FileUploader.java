@@ -3,7 +3,6 @@ package com.microsoft.azure.datalake.store;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.PriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

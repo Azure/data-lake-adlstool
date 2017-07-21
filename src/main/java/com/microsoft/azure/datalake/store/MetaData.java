@@ -16,7 +16,7 @@ class MetaData {
 	boolean uploadSuccessful = true;
 	
 	
-	// Constructor called by producer. Perform all the unique operations here.
+	// Constructor called by producer. Perform all the one time operations here.
 	// all other class functions are called by concurrent consumers.
 	MetaData(File sourceFile, String destinationPath) {
 		this.sourceFile = sourceFile;

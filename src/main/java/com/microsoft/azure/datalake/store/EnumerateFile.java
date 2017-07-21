@@ -14,7 +14,7 @@ class EnumerateFile implements Runnable {
 	private ProcessingQueue<MetaData> metaDataQ;
 	private ConsumerQueue<UploadJob> jobQ;
 	private static final int chunkSize = 256 * 1024 * 1024; // 256 MB
-	private static final int threshhold = 350 * 1024 * 1024; // 350 MB
+	private static final int threshhold = 356 * 1024 * 1024; // 356 MB
 	
 	EnumerateFile(File srcDir, String destination, ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ) {
 		this.metaDataQ = metaDataQ;

@@ -1,17 +1,11 @@
 package com.microsoft.azure.datalake.store;
 
-import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -124,16 +118,13 @@ class JobExecutor implements Runnable {
 			
 	        long totalBytesRead = 0;
 	        long dataRead = 0;
-	       // srcData.skip(job.offset);
 	        FileChannel Fc = srcData.getChannel();
-	        //Fc.position(job.offset);
 	        Fc.map(FileChannel.MapMode.READ_ONLY, job.offset, job.size);
 	        buf.clear();
 	        
 	        while(totalBytesRead < job.size && 
 	        		(dataRead = Fc.read(buf)) != -1) {
 	        	int r = (int)Math.min(dataRead, job.size - totalBytesRead);
-	        	//log.error("Read data " + r);
 	        	stream.write(data, 0, r);
 	            totalBytesRead += r;
 	            buf.clear();
