@@ -52,12 +52,9 @@ class EnumerateFile implements Runnable {
 		jobQ.add(new UploadJob(front, 0, 0, 0, JobType.MKDIR));
 	}
 	
-	/*
-	 * TODO what if the size of the file is 0 bytes.
-	 */
 	private void generateUploadJob(MetaData front) {
-		long size = 0, chunks = 0;
-		for(long offset = 0; offset < front.size(); offset += size) {
+		long size = 0, chunks = 0, offset = 0;
+		do {
 			if(front.size() - offset <= threshhold) {
 				size = front.size() - offset;
 			} else {
@@ -65,8 +62,10 @@ class EnumerateFile implements Runnable {
 			}
 			jobQ.add(new UploadJob(front, offset, size, chunks, JobType.FILEUPLOAD));
 			chunks++;
-		}
-		log.debug("Generated " + front.splits + " number of upload jobs for file " + front.getSourceFilePath() + " with destination " + front.getDestinationIntermediatePath());
+			offset += size;
+		} while(offset < front.size());
+		log.debug("Generated " + front.splits + " number of upload jobs for file " 
+				+ front.getSourceFilePath() + " with destination " + front.getDestinationIntermediatePath());
 	}
 	
 	public static long getNumberOfFileChunks(long size) {
