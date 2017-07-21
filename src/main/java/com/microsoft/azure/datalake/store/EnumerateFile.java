@@ -13,8 +13,8 @@ class EnumerateFile implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
 	private ProcessingQueue<MetaData> metaDataQ;
 	private ConsumerQueue<UploadJob> jobQ;
-	private static final int chunkSize = 256 * 1024 * 1024; // 256 MB
-	private static final int threshhold = 350 * 1024 * 1024; // 350 MB
+	public static final int chunkSize = 256 * 1024 * 1024; // 256 MB
+	public static final int threshhold = 350 * 1024 * 1024; // 350 MB
 	
 	EnumerateFile(File srcDir, String destination, ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ) {
 		this.metaDataQ = metaDataQ;
@@ -29,7 +29,7 @@ class EnumerateFile implements Runnable {
 				if(source.isDirectory()) {
 					File[] subDir = source.listFiles();
 					if(subDir != null) {
-						String dstPrefix = front.getDstFinalPath();
+						String dstPrefix = front.getDestinationFinalPath();
 						for(File sub : subDir) {
 							metaDataQ.add(new MetaData(sub, dstPrefix));
 						}
@@ -56,7 +56,6 @@ class EnumerateFile implements Runnable {
 	 * TODO what if the size of the file is 0 bytes.
 	 */
 	private void generateUploadJob(MetaData front) {
-		front.splits = getNumberOfFileChunks(front.size());
 		long size = 0, chunks = 0;
 		for(long offset = 0; offset < front.size(); offset += size) {
 			if(front.size() - offset <= threshhold) {
@@ -67,19 +66,6 @@ class EnumerateFile implements Runnable {
 			jobQ.add(new UploadJob(front, offset, size, chunks, JobType.FILEUPLOAD));
 			chunks++;
 		}
-		log.debug("Generated " + front.splits + " number of upload jobs for file " + front.getSourceFilePath() + " with destination " + front.getDstUploadPath());
-	}
-	
-	private long getNumberOfFileChunks(long size) {
-		if(size <= threshhold) {
-			return 1;
-		}
-		long chunks = 0;
-		if(size%chunkSize <= (threshhold-chunkSize)) {
-			chunks = size/chunkSize;
-		} else {
-			chunks = (long)Math.ceil(1.0*size/chunkSize);
-		}
-		return chunks;
+		log.debug("Generated " + front.splits + " number of upload jobs for file " + front.getSourceFilePath() + " with destination " + front.getDestinationIntermediatePath());
 	}
 }

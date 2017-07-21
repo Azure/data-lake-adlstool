@@ -115,7 +115,7 @@ class JobExecutor implements Runnable {
 	}
 	
 	boolean uploadFileInternal(UploadJob job) {
-		String filePath = job.getDstUploadPath();
+		String filePath = job.getDestinationIntermediatePath();
 		try ( ADLFileOutputStream stream = client.createFile(filePath, IfExists.OVERWRITE);
 				FileInputStream srcData = new FileInputStream(job.data.sourceFile);)
 		{
@@ -154,7 +154,7 @@ class JobExecutor implements Runnable {
 	boolean concatenate(UploadJob job) {
 		if(!job.data.isSplitUpload()) return true;
 		boolean status = false;
-		String finalDestination = job.getDstFinalPath();
+		String finalDestination = job.getDestinationFinalPath();
 		List<String> chunkedFiles = job.data.getChunkFiles();
 		try {
 			client.delete(finalDestination);
@@ -171,7 +171,7 @@ class JobExecutor implements Runnable {
 	 * clean up?
 	 */
 	boolean verifyUpload(UploadJob job) throws IOException {
-		String filePath = job.getDstFinalPath();
+		String filePath = job.getDestinationFinalPath();
 		DirectoryEntry entry = client.getDirectoryEntry(filePath);
 		if(entry.length != job.data.sourceFile.length()) {
 			log.error(job.data.sourceFile.getAbsolutePath() + " final verification failed");
@@ -182,7 +182,7 @@ class JobExecutor implements Runnable {
 	}
 	
 	void mkDir(UploadJob job) {
-		String filePath = job.getDstFinalPath();
+		String filePath = job.getDestinationFinalPath();
 		boolean status = false;
 		try {
 			status = client.createDirectory(filePath);

@@ -8,7 +8,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 class MetaData {
 	static final char fileSeperator = '/';
+	static final int threshhold = EnumerateFile.threshhold;
+	static final int chunkSize = EnumerateFile.chunkSize;
 	String destinationPath, destinationUuidName, sourceFileName;
+	String destinationIntermediatePath;
 	File sourceFile;
 	long splits;
 	AtomicLong doneCount = new AtomicLong(0);
@@ -16,8 +19,27 @@ class MetaData {
 	MetaData(File sourceFile, String destinationPath) {
 		this.sourceFile = sourceFile;
 		this.destinationPath = trimTrailingSlash(destinationPath) + fileSeperator;
-		destinationUuidName = UUID.randomUUID().toString() + fileSeperator;
+		this.destinationUuidName = UUID.randomUUID().toString() + fileSeperator;
 		sourceFileName = sourceFile.getName();
+		splits = getNumberOfFileChunks(sourceFile.length());
+		if(splits == 1) {
+			destinationIntermediatePath = this.destinationPath + sourceFileName;
+		} else {
+			destinationIntermediatePath = this.destinationPath + destinationUuidName + sourceFileName + "-";
+		}
+	}
+	
+	private static long getNumberOfFileChunks(long size) {
+		if(size <= threshhold) {
+			return 1;
+		}
+		long chunks = 0;
+		if(size%chunkSize <= (threshhold-chunkSize)) {
+			chunks = size/chunkSize;
+		} else {
+			chunks = (long)Math.ceil(1.0*size/chunkSize);
+		}
+		return chunks;
 	}
 	
 	public String getSourceFilePath() {
@@ -27,15 +49,11 @@ class MetaData {
 	 * To avoid renaming, if the file size is less than chunkSize there is no
 	 * intermediate UUID name.
 	 */
-	public String getDstUploadPath() {
-		if(splits == 1) {
-			return destinationPath + sourceFileName;
-		} else {
-			return destinationPath + destinationUuidName + sourceFileName + "-";
-		}
+	public String getDestinationIntermediatePath() {
+		return destinationIntermediatePath;
 	}
 	
-	public String getDstFinalPath() {
+	public String getDestinationFinalPath() {
 		return destinationPath + sourceFile.getName();
 	}
 	
@@ -45,7 +63,7 @@ class MetaData {
 	
 	public List<String> getChunkFiles() {
 		List<String> list = new ArrayList<String>();
-		String destination = getDstUploadPath();
+		String destination = getDestinationIntermediatePath();
 		for(long jobid = 0; jobid < splits; jobid++) {
 			list.add(destination + jobid);
 		}

@@ -31,12 +31,12 @@ class UploadJob implements Comparable<UploadJob>{
 		data.uploadSuccessful &= success;
 	}
 	
-	public String getDstUploadPath() {
-		return data.getDstUploadPath() + (data.splits > 1 ? id : "");
+	public String getDestinationIntermediatePath() {
+		return data.getDestinationIntermediatePath() + (data.splits > 1 ? id : "");
 	}
 	
-	public String getDstFinalPath() {
-		return data.getDstFinalPath();
+	public String getDestinationFinalPath() {
+		return data.getDestinationFinalPath();
 	}
 	
 	public String getSourcePath() {
