@@ -140,15 +140,13 @@ class AdlsTool {
         }
         System.setProperty("http.keepAlive", "true");
         System.setProperty("http.maxConnections", (new Integer(numThreads)).toString());
-        if(System.getProperty("java.runtime.version").startsWith("1.8.")) {
-        	System.setProperty("https.cipherSuites", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256");
-        }
+        setCipher();
     	return numThreads;
     }
     
-    public static void resetCipher() {
+    public static void setCipher() {
     	if(System.getProperty("java.runtime.version").startsWith("1.8.")) {
-        	System.setProperty("https.cipherSuites", "");
+        	System.setProperty("https.cipherSuites", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256");
         }
     }
 

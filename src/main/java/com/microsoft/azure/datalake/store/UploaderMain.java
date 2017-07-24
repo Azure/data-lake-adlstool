@@ -29,7 +29,7 @@ public class UploaderMain {
             long start = System.currentTimeMillis();
             UploadResult R = FileUploader.upload(srcPath, dstPath, client);
             long stop = System.currentTimeMillis();
-            AdlsTool.resetCipher();
+
             if(R.success) {
             	System.out.println("SUCCESSFULLY COMPLETE");
             } else {
