@@ -1,19 +1,28 @@
 package com.microsoft.azure.datalake.store;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.microsoft.azure.datalake.store.JobExecutor.UploadStatus;
+
 class MetaData {
-	static final char fileSeperator = '/';
+	private static final char fileSeperator = '/';
+	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
 	String destinationPath, destinationUuidName;
 	String destinationIntermediatePath = null;
 	File sourceFile;
 	long splits;
 	AtomicLong doneCount = new AtomicLong(0);
-	boolean uploadSuccessful = true;
+	UploadStatus status = UploadStatus.successful;
+	Boolean existsAtDestination = null;
+
 	
 	
 	// Constructor called by producer. Perform all the one time operations here.
@@ -68,11 +77,41 @@ class MetaData {
 		return sourceFile.length();
 	}
 	
+	public boolean isFinalUpload() {
+		return splits == doneCount.incrementAndGet();
+	}
+	
 	private static String trimTrailingSlash(String inStr) {
 		int i = inStr.length()-1;
 		while(i >= 0 && inStr.charAt(i) == '/') {
 			i--;
 		}
 		return inStr.substring(0, i+1);
+	}
+
+	public synchronized boolean existsAtDestination(ADLStoreClient client) {
+		if(existsAtDestination != null) {
+			return existsAtDestination;
+		}
+		try {
+			existsAtDestination = client.checkExists(getDestinationFinalPath());
+		} catch (IOException e) {
+			log.error("Failed to check if exists, skipping upload: " + e.getMessage());
+			existsAtDestination = true;
+		}
+		return existsAtDestination;
+	}
+
+	public synchronized void updateStatus(UploadStatus status) {
+		if(UploadStatus.failed == status) {
+			this.status = status;
+		}
+	}
+	
+	public synchronized UploadStatus getUploadStatus() {
+		if(existsAtDestination != null && existsAtDestination == true) {
+			return UploadStatus.skipped;
+		}
+		return status;
 	}
 }

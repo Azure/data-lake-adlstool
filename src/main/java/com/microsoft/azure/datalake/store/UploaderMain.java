@@ -1,7 +1,5 @@
 package com.microsoft.azure.datalake.store;
 
-import java.io.IOException;
-
 public class UploaderMain {
 	static final int numberOfArguments = 4;
 	
@@ -14,7 +12,7 @@ public class UploaderMain {
 
         String srcPath = args[2].trim();
         String dstPath = args[3].trim();
-        
+        String overwrite = args.length == numberOfArguments ? null : args[4].trim();
         if (srcPath == null || srcPath.length() == 0) {
             System.out.println("Illegal number of command-line parameters: " + args.length);
             AdlsTool.usage(1200);
@@ -24,10 +22,15 @@ public class UploaderMain {
             System.out.println("Illegal number of command-line parameters: " + args.length);
             AdlsTool.usage(1201);
         }
-
+        
+        if(overwrite != null && !overwrite.equals("overwrite")) {
+        	System.out.println("Illegal optional parameter to overwrite");
+        	AdlsTool.usage(1201);
+        }
+        IfExists overwriteOption = overwrite != null ? IfExists.OVERWRITE : IfExists.FAIL; 
         try {
             long start = System.currentTimeMillis();
-            UploadResult R = FileUploader.upload(srcPath, dstPath, client);
+            UploadResult R = FileUploader.upload(srcPath, dstPath, client, overwriteOption);
             long stop = System.currentTimeMillis();
 
             if(R.success) {

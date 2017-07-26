@@ -1,5 +1,7 @@
 package com.microsoft.azure.datalake.store;
 
+import com.microsoft.azure.datalake.store.JobExecutor.UploadStatus;
+
 class UploadJob implements Comparable<UploadJob>{
 	MetaData data;
 	long offset, id, size;
@@ -20,15 +22,15 @@ class UploadJob implements Comparable<UploadJob>{
 	}
 	
 	public boolean isFinalUpload() {
-		return data.splits == data.doneCount.incrementAndGet();
+		return data.isFinalUpload();
 	}
 	
-	public boolean fileUploadSuccess() {
-		return data.uploadSuccessful;
+	public UploadStatus fileUploadSuccess() {
+		return data.getUploadStatus();
 	}
 	
-	public void updateSuccess(boolean success) {
-		data.uploadSuccessful &= success;
+	public boolean existsAtDestination(ADLStoreClient client) {
+		return data.existsAtDestination(client);
 	}
 	
 	public String getDestinationIntermediatePath() {
@@ -40,6 +42,12 @@ class UploadJob implements Comparable<UploadJob>{
 	}
 	
 	public String getSourcePath() {
-		return data.sourceFile.getAbsolutePath();
+		return data.getSourceFilePath();
+	}
+
+	public void updateStatus(UploadStatus status) {
+		if(UploadStatus.failed == status) {
+			data.updateStatus(status);
+		}
 	}
 }

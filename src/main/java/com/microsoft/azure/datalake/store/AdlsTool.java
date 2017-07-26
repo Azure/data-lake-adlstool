@@ -155,11 +155,10 @@ class AdlsTool {
         System.out.println("ADLS Java command-line tool");
         System.out.println("Usage:");
         System.out.println("  adlstool <modifyacl|removeacl> <credfile> <path> \"<aclspec>\"");
-        System.out.println("  adlstool upload <credfile> <sourcePath> <destinationPath>");
+        System.out.println("  adlstool upload <credfile> <sourcePath> <destinationPath> [overwrite]");
         System.out.println();
         System.out.println("For upload:");
-        System.out.println("  sourcePath= local path to a file or directory to be uploaded");
-        System.out.println("  destinationPath= path to a directory on ADLS to upload the file/directory to");
+        System.out.println("  overwrite= Optional paramter. Specify overwrite, if destination files with same names should be overwritten");
         System.out.println();
         System.out.println("Where <credfile> is the path to a java property file that contains the following properties:");
         System.out.println("  account= fully qualified domain name of the Azure Data Lake Store account");

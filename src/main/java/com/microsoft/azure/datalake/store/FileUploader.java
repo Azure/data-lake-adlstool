@@ -20,6 +20,15 @@ public class FileUploader {
 	private ADLStoreClient client;
 	private Thread[] executorThreads;
 	private JobExecutor[] executor;
+	private IfExists overwrite;
+	
+	public FileUploader(ADLStoreClient client, IfExists overwriteOption) {
+		metaDataQ = new ProcessingQueue<MetaData>();
+		jobQ = new ConsumerQueue<UploadJob>(new PriorityQueue<UploadJob>());
+		uploaderThreadCount = AdlsTool.threadSetup();
+		this.client = client;
+		this.overwrite = overwriteOption;
+	}
 	
 	/*
 	 * Uploads the given source dir/file to a directory on ADLS.
@@ -27,19 +36,18 @@ public class FileUploader {
 	 * @param destination Destination directory to copy the files to.
 	 * @param client ADLStoreClient to use to upload the file.
 	 */
-	public static UploadResult upload(String source, String destination, ADLStoreClient client) throws IOException, InterruptedException {
-		FileUploader F = new FileUploader();
-		return F.uploadInternal(source, destination, client);
+	public static UploadResult upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
+		FileUploader F = new FileUploader(client, overwriteOption);
+		return F.uploadInternal(source, destination);
 	}
 	
-	private UploadResult uploadInternal(String source, String destination, ADLStoreClient client) throws InterruptedException, IOException {
+	private UploadResult uploadInternal(String source, String destination) throws InterruptedException, IOException {
 		if(source == null) {
 			throw new IllegalArgumentException("source is null");
 		} else if(destination == null) {
 			throw new IllegalArgumentException("destination is null");
-		} else if(client == null) {
-			throw new IllegalArgumentException("client is null");
 		}
+		
 		source = source.trim();
 		destination = destination.trim();
 		if(source.isEmpty()) {
@@ -52,7 +60,6 @@ public class FileUploader {
 		if(!srcDir.exists()) {
 			throw new IllegalArgumentException("Source doesn't exist");
 		}
-		initialize(client);
 		
 		if(srcDir.isFile()) {
 			if(!verifyDestination(destination)) {
@@ -63,20 +70,11 @@ public class FileUploader {
 	}
 	
 	
-	
-	
-	private void initialize(ADLStoreClient client) {
-		metaDataQ = new ProcessingQueue<MetaData>();
-		jobQ = new ConsumerQueue<UploadJob>(new PriorityQueue<UploadJob>());
-		uploaderThreadCount = AdlsTool.threadSetup();
-		this.client = client;
-	}
-	
 	private void startUploaderThreads(ConsumerQueue<UploadJob> jobQ) {
 		executorThreads = new Thread[uploaderThreadCount];
 		executor = new JobExecutor[uploaderThreadCount];
 		for(int i = 0; i < executorThreads.length; i++) {
-			executor[i] = new JobExecutor(jobQ, client);
+			executor[i] = new JobExecutor(jobQ, client, overwrite);
 			executorThreads[i] = new Thread(executor[i]);
 			executorThreads[i].start();
 		}

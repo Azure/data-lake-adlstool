@@ -22,6 +22,13 @@ class JobExecutor implements Runnable {
 	ConsumerQueue<UploadJob> jobQ;
 	ADLStoreClient client;
 	Stats stats;
+	IfExists overwrite;
+	
+	static enum UploadStatus {
+		successful,
+		failed,
+		skipped
+	}
 	
 	class Stats {
 		int numberOfChunksUploaded;
@@ -30,6 +37,7 @@ class JobExecutor implements Runnable {
 		long totalBytesUploaded;
 		List<String> successfulUploads = new LinkedList<String>();
 		List<String> failedUploads = new LinkedList<>();
+		List<String> skippedUploads = new LinkedList<>();
 		
 		public void begin() {
 			totalTimeTakenInMilliSeconds = System.currentTimeMillis();
@@ -37,11 +45,11 @@ class JobExecutor implements Runnable {
 		public void end() {
 			totalTimeTakenInMilliSeconds = System.currentTimeMillis() - totalTimeTakenInMilliSeconds;
 		}
-		public void updateChunkStats(boolean uploadStatus, long size) {
-			if(uploadStatus) {
+		public void updateChunkStats(UploadStatus status, long size) {
+			if(status == UploadStatus.successful) {
 				numberOfChunksUploaded++;
 				totalBytesUploaded += size;
-			} else {
+			} else if(status == UploadStatus.failed){
 				numberOfFailedUploads++;
 			}
 		}
@@ -49,28 +57,32 @@ class JobExecutor implements Runnable {
 		public long getBytesUploaded() {
 			return totalBytesUploaded;
 		}
-		public int getFailedUploads() {
-			return failedUploads.size();
-		}
-		public void addUploadedItem(UploadJob job, boolean status) {
-			if(status) {
+		
+		public void addUploadedItem(UploadJob job, UploadStatus status) {
+			if(status == UploadStatus.successful) {
 				successfulUploads.add(job.getSourcePath());
-			} else {
+			} else if(status == UploadStatus.failed){
 				failedUploads.add(job.getSourcePath());
+			} else {
+				skippedUploads.add(job.getSourcePath());
 			}
 			
 		}
 		public List<String> getSuccessfulUploads() {
 			return successfulUploads;
 		}
-		public List<String> getFailedUplaods() {
+		public List<String> getFailedUploads() {
 			return failedUploads;
+		}
+		public List<String> getSkippedUplaods() {
+			return skippedUploads;
 		}
 	}
 	
-	JobExecutor(ConsumerQueue<UploadJob> jobQ, ADLStoreClient client) {
+	JobExecutor(ConsumerQueue<UploadJob> jobQ, ADLStoreClient client, IfExists overwrite) {
 		this.jobQ = jobQ;
 		this.client = client;
+		this.overwrite = overwrite;
 		stats = new Stats();
 	}
 	
@@ -88,27 +100,41 @@ class JobExecutor implements Runnable {
 	}
 	
 	void uploadFile(UploadJob job){
-		boolean status = uploadFileInternal(job);
-		job.updateSuccess(status);
+		UploadStatus status = uploadFileInternal(job);
+		job.updateStatus(status);
 		stats.updateChunkStats(status, job.size);
 		if(job.isFinalUpload()) {
-			status = false;
-			if(job.fileUploadSuccess()) {
+			if(job.fileUploadSuccess() == UploadStatus.successful) {
 				try {
-					if(concatenate(job) && verifyUpload(job)) {
-						status = true;
+					if(!(concatenate(job) && verifyUpload(job))) {
+						status = UploadStatus.failed;
 					}
 				} catch (IOException e) {
 					log.error(e.getMessage());
 				}
+			} else if(job.fileUploadSuccess() == UploadStatus.failed){
+				log.error("Upload failed: source file path " + job.getSourcePath());
 			} else {
-				log.error("Upload failed: source file path " + job.data.getSourceFilePath());
+				log.debug("Upload Skipped: source file path " + job.getSourcePath());
 			}
 			stats.addUploadedItem(job, status);
 		}
 	}
 	
-	boolean uploadFileInternal(UploadJob job) {
+	boolean skipUpload(UploadJob job) {
+		if(overwrite == IfExists.OVERWRITE) {
+			// overwrite option is provided by the user. Proceed to upload the file.
+			return false;
+		} else {
+			// check to see if there is already a file with same name at the destination.
+			return job.existsAtDestination(client);
+		}
+	}
+	
+	private UploadStatus uploadFileInternal(UploadJob job) {
+		if(skipUpload(job)) {
+			return UploadStatus.skipped;
+		}
 		String filePath = job.getDestinationIntermediatePath();
 		try ( ADLFileOutputStream stream = client.createFile(filePath, IfExists.OVERWRITE);
 				FileInputStream srcData = new FileInputStream(job.data.sourceFile);)
@@ -132,13 +158,13 @@ class JobExecutor implements Runnable {
 	        Fc.close();
 	        if(totalBytesRead != job.size) {
 	           log.error("Failed to upload: " + job.data.getSourceFilePath());
-	           return false;
+	           return UploadStatus.failed;
 	        }
 		} catch (IOException e) {
 			log.error(e.getMessage());
-			return false;
+			return UploadStatus.failed;
 		}
-		return true;
+		return UploadStatus.successful;
 	}
 	
 	
@@ -174,9 +200,11 @@ class JobExecutor implements Runnable {
 	
 	void mkDir(UploadJob job) {
 		String filePath = job.getDestinationFinalPath();
-		boolean status = false;
+		UploadStatus status = UploadStatus.failed;
 		try {
-			status = client.createDirectory(filePath);
+			if(client.createDirectory(filePath)) {
+				status = UploadStatus.successful;
+			}
 		} catch (IOException e) {
 			log.error("Failed to create directory " + filePath);
 		}

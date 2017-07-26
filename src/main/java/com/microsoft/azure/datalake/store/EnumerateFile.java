@@ -68,7 +68,7 @@ class EnumerateFile implements Runnable {
 				+ front.getSourceFilePath() + " with destination " + front.getDestinationIntermediatePath());
 	}
 	
-	public static long getNumberOfFileChunks(long size) {
+	static long getNumberOfFileChunks(long size) {
 		if(size <= threshhold) {
 			return 1;
 		}

@@ -12,7 +12,7 @@ public class UploadResult {
 	public void update(JobExecutor.Stats stats) {
 		totalSizeInBytes += stats.getBytesUploaded();
 		successfulUploads.addAll(stats.getSuccessfulUploads());
-		failedUplaods.addAll(stats.getFailedUplaods());
+		failedUplaods.addAll(stats.getFailedUploads());
 		timeTakenInMilliSeconds = Math.max(timeTakenInMilliSeconds, stats.totalTimeTakenInMilliSeconds);
 	}
 	List<String> getSuccessfulUploads() {
