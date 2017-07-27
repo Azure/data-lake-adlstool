@@ -15,6 +15,7 @@ class EnumerateFile implements Runnable {
 	private ConsumerQueue<UploadJob> jobQ;
 	private static final int chunkSize = 256 * 1024 * 1024; // 256 MB
 	private static final int threshhold = 356 * 1024 * 1024; // 356 MB
+	private long bytesToUpload;
 	
 	EnumerateFile(File srcDir, String destination, ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ) {
 		this.metaDataQ = metaDataQ;
@@ -66,6 +67,11 @@ class EnumerateFile implements Runnable {
 		} while(offset < front.size());
 		log.debug("Generated " + front.splits + " number of upload jobs for file " 
 				+ front.getSourceFilePath() + " with destination " + front.getDestinationIntermediatePath());
+		bytesToUpload += front.size();
+	}
+	
+	public long getBytesToUpload() {
+		return bytesToUpload;
 	}
 	
 	static long getNumberOfFileChunks(long size) {

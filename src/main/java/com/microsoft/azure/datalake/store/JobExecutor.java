@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +35,8 @@ class JobExecutor implements Runnable {
 	class Stats {
 		int numberOfChunksUploaded;
 		int numberOfFailedUploads;
-		long totalTimeTakenInMilliSeconds;
-		long totalBytesUploaded;
+		long totalTimeTakenInMilliSeconds = 0;
+		AtomicLong totalBytesUploaded = new AtomicLong(0);
 		List<String> successfulUploads = new LinkedList<String>();
 		List<String> failedUploads = new LinkedList<>();
 		List<String> skippedUploads = new LinkedList<>();
@@ -48,14 +50,14 @@ class JobExecutor implements Runnable {
 		public void updateChunkStats(UploadStatus status, long size) {
 			if(status == UploadStatus.successful) {
 				numberOfChunksUploaded++;
-				totalBytesUploaded += size;
+				totalBytesUploaded.addAndGet(size);
 			} else if(status == UploadStatus.failed){
 				numberOfFailedUploads++;
 			}
 		}
 		
 		public long getBytesUploaded() {
-			return totalBytesUploaded;
+			return totalBytesUploaded.get();
 		}
 		
 		public void addUploadedItem(UploadJob job, UploadStatus status) {
@@ -137,7 +139,7 @@ class JobExecutor implements Runnable {
 		}
 		String filePath = job.getDestinationIntermediatePath();
 		try ( ADLFileOutputStream stream = client.createFile(filePath, IfExists.OVERWRITE);
-				FileInputStream srcData = new FileInputStream(job.data.sourceFile);)
+				FileInputStream srcData = new FileInputStream(job.getSourcePath());)
 		{
 			byte[] data = new byte[bufSize];
 			ByteBuffer buf = ByteBuffer.wrap(data);

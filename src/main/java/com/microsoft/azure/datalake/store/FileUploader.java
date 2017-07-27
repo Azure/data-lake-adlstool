@@ -21,6 +21,7 @@ public class FileUploader {
 	private Thread[] executorThreads;
 	private JobExecutor[] executor;
 	private IfExists overwrite;
+	private EnumerateFile jobGen;
 	
 	public FileUploader(ADLStoreClient client, IfExists overwriteOption) {
 		metaDataQ = new ProcessingQueue<MetaData>();
@@ -81,7 +82,7 @@ public class FileUploader {
 	}
 	
 	private Thread startEnumeration(File source, String destination) {
-		EnumerateFile jobGen = new EnumerateFile(source, destination, metaDataQ, jobQ);
+		jobGen = new EnumerateFile(source, destination, metaDataQ, jobQ);
 		Thread t = new Thread(jobGen);
 		t.start();
 		return t;
@@ -90,13 +91,19 @@ public class FileUploader {
 	private UploadResult upload(File source, String destination) throws IOException, InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
-		waitForCompletion(generateJob);
-		return joinUploaderThreads();
+		Thread statusThread = waitForCompletion(generateJob);
+		UploadResult R = joinUploaderThreads();
+		statusThread.interrupt();
+		return R;
 	}
 	
-	private void waitForCompletion(Thread generateJob) throws InterruptedException {
+	private Thread waitForCompletion(Thread generateJob) throws InterruptedException {
 		generateJob.join();
 		jobQ.markComplete(); // Consumer threads wait until enumeration is active.
+		StatusBar statusBar = new StatusBar(jobGen.getBytesToUpload(), executor);
+		Thread status = new Thread(statusBar);  // start a status bar.
+		status.start();
+		return status;
 	}
 	
 	private UploadResult joinUploaderThreads() throws InterruptedException {
@@ -121,5 +128,32 @@ public class FileUploader {
 			throw new IllegalArgumentException("Destination path points to a file. Please provide a directory");
 		}
 		return true;
+	}
+	
+	class StatusBar implements Runnable {
+		private long totalBytesToUpload;
+		private JobExecutor[] uploaders;
+		private static final long sleepTime = 500;
+		StatusBar(long bytesToUpload, JobExecutor[] uploaders) {
+			totalBytesToUpload = bytesToUpload;
+			this.uploaders = uploaders;
+		}
+		public void run() {
+			int percent = 0;
+			while(percent < 100) {
+				try {
+					Thread.sleep(sleepTime);
+				} catch (InterruptedException e) {
+					break;
+				}
+				long bytesUploaded = 0;
+				for(int i = 0; i < uploaders.length; i++) {
+					bytesUploaded += executor[i].stats.getBytesUploaded();
+				}
+				percent = (int) ((100.0*bytesUploaded)/totalBytesToUpload);
+				System.out.printf("%% Uploaded: %d\r", percent);
+			}
+		}
+		
 	}
 }
