@@ -62,14 +62,18 @@ public class FileUploader {
 			throw new IllegalArgumentException("Source doesn't exist");
 		}
 		
-		if(srcDir.isFile()) {
+		if(!isDirectory(srcDir)) {
 			if(!verifyDestination(destination)) {
 				return new UploadResult();
 			}
 		}
+		
 		return upload(srcDir, destination);
 	}
 	
+	private static boolean isDirectory(File inFile) {
+		return inFile.listFiles() != null;
+	}
 	
 	private void startUploaderThreads(ConsumerQueue<UploadJob> jobQ) {
 		executorThreads = new Thread[uploaderThreadCount];

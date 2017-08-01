@@ -142,8 +142,7 @@ class JobExecutor implements Runnable {
 				FileInputStream srcData = new FileInputStream(job.getSourcePath());)
 		{
 			byte[] data = new byte[bufSize];
-			ByteBuffer buf = ByteBuffer.wrap(data);
-			
+			ByteBuffer buf = ByteBuffer.wrap(data);	
 	        long totalBytesRead = 0;
 	        long dataRead = 0;
 	        FileChannel Fc = srcData.getChannel();

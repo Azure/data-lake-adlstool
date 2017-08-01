@@ -118,10 +118,11 @@ class AdlsTool {
         long seconds = millis / 1000;
         long minutes = seconds / 60;
         long displayseconds = seconds % 60;
+        millis = millis%1000;
         if (minutes > 0) {
-            return String.format("%dm : %ds", minutes, displayseconds);
+            return String.format("%dm : %d.%03ds", minutes, displayseconds, millis);
         } else {
-            return String.format("%d seconds", displayseconds);
+            return String.format("%d.%03d seconds", displayseconds, millis);
         }
     }
     

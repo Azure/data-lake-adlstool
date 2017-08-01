@@ -8,17 +8,22 @@ public class UploadResult {
 	public long timeTakenInMilliSeconds = 0;
 	long totalSizeInBytes;
 	public List<String> successfulUploads = new LinkedList<>();
-	public List<String> failedUplaods = new LinkedList<>();
+	public List<String> failedUploads = new LinkedList<>();
+	public List<String> skippedUploads = new LinkedList<>();
 	public void update(JobExecutor.Stats stats) {
 		totalSizeInBytes += stats.getBytesUploaded();
 		successfulUploads.addAll(stats.getSuccessfulUploads());
-		failedUplaods.addAll(stats.getFailedUploads());
+		failedUploads.addAll(stats.getFailedUploads());
+		skippedUploads.addAll(stats.getSkippedUplaods());
 		timeTakenInMilliSeconds = Math.max(timeTakenInMilliSeconds, stats.totalTimeTakenInMilliSeconds);
 	}
-	List<String> getSuccessfulUploads() {
+	public List<String> getSuccessfulUploads() {
 		return successfulUploads;
 	}
-	List<String> getFailedUploads() {
-		return failedUplaods;
+	public List<String> getFailedUploads() {
+		return failedUploads;
+	}
+	public List<String> getSkippedUploads() {
+		return skippedUploads;
 	}
 }

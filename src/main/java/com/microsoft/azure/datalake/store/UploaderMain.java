@@ -36,14 +36,23 @@ public class UploaderMain {
             if(R.success) {
             	System.out.println("SUCCESSFULLY COMPLETE");
             } else {
-            	System.out.println("UPLOAD FAILED");
+            	System.out.println("UPLOAD FAILED FOR FEW FILES");
             }
-            System.out.println("# of Files Uploaded: " + R.successfulUploads.size());
-            System.out.println("# of Failed Uploads: " + R.failedUplaods.size());
-            System.out.println("Total number of Bytes uploaded " + R.totalSizeInBytes);
             System.out.println("Time taken: " + AdlsTool.timeString(stop - start));
+            System.out.println("# of Files Uploaded: " + R.getSuccessfulUploads().size());
+            System.out.println("Total number of Bytes uploaded: " + R.totalSizeInBytes);
+            if(R.getSkippedUploads().size() + R.getFailedUploads().size() > 0) {
+            	System.out.println("Files skipped or failed upload:");
+                for(String file: R.getFailedUploads()) {
+                	System.out.println(file);
+                }
+                for(String file: R.getSkippedUploads()) {
+                	System.out.println(file);
+                }
+            }
         } catch (Exception ex) {
             System.out.println("Error uploading files");
+            System.out.println(ex.getMessage());
             ex.printStackTrace();
             System.exit(5001);
         }
