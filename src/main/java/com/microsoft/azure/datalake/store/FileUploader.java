@@ -116,7 +116,6 @@ public class FileUploader {
 			executorThreads[i].join();
 			result.update(executor[i].stats);
 		}
-		result.success = true;
 		return result;
 	}
 

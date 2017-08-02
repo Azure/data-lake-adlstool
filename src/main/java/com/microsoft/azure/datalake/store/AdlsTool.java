@@ -23,7 +23,7 @@ import java.util.Properties;
  * The class that contains the main method for the command-line tool.
  */
 class AdlsTool {
-
+	static final int oneMB = 1024*1024;
     public static void main( String[] args ) {
         // Currently SetAcl is the only think this tool does
         // We can fill in more stuff in this method if the tool evolves to do more
@@ -125,6 +125,24 @@ class AdlsTool {
             return String.format("%d.%03d seconds", displayseconds, millis);
         }
     }
+    /*
+     * User can specify chunksize in MB.
+     */
+    public static int getChunkSize(int defaultChunkSize) {
+    	Properties p = System.getProperties();
+    	String chunkSize = p.getProperty("adlstool.chunksize");
+    	int size = defaultChunkSize;
+    	if(chunkSize != null) {
+    		try {
+    			size = Integer.parseUnsignedInt(chunkSize);
+    			size = Math.min(defaultChunkSize, size*oneMB);
+    		} catch (NumberFormatException ex) {
+    			System.out.println("Illegal chunksize in system property adlstool.chunksize: " + chunkSize);
+    			System.exit(1008);
+    		}
+    	}
+    	return size;
+    }
     
     public static int threadSetup() {
         // Determine the number of threads to use
@@ -133,7 +151,7 @@ class AdlsTool {
         String threadStr = p.getProperty("adlstool.threads");
         if (threadStr != null) {
             try {
-                numThreads = Integer.parseInt(threadStr);
+            	numThreads = Integer.parseUnsignedInt(threadStr);
             } catch (NumberFormatException ex) {
                 System.out.println("Illegal threadcount in system property adlstool.threads : " + threadStr);
                 System.exit(1008);

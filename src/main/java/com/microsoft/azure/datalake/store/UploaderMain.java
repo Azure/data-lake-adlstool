@@ -33,7 +33,7 @@ public class UploaderMain {
             UploadResult R = FileUploader.upload(srcPath, dstPath, client, overwriteOption);
             long stop = System.currentTimeMillis();
 
-            if(R.success) {
+            if(R.getSkippedUploads().size() + R.getFailedUploads().size() == 0) {
             	System.out.println("SUCCESSFULLY COMPLETE");
             } else {
             	System.out.println("UPLOAD FAILED FOR FEW FILES");
@@ -44,10 +44,10 @@ public class UploaderMain {
             if(R.getSkippedUploads().size() + R.getFailedUploads().size() > 0) {
             	System.out.println("Files skipped or failed upload:");
                 for(String file: R.getFailedUploads()) {
-                	System.out.println(file);
+                	System.out.println('\t' + file);
                 }
                 for(String file: R.getSkippedUploads()) {
-                	System.out.println(file);
+                	System.out.println('\t' + file);
                 }
             }
         } catch (Exception ex) {

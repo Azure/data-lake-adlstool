@@ -4,7 +4,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class UploadResult {
-	boolean success = false;
 	public long timeTakenInMilliSeconds = 0;
 	long totalSizeInBytes;
 	public List<String> successfulUploads = new LinkedList<>();

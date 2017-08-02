@@ -106,7 +106,8 @@ class JobExecutor implements Runnable {
 		job.updateStatus(status);
 		stats.updateChunkStats(status, job.size);
 		if(job.isFinalUpload()) {
-			if(job.fileUploadSuccess() == UploadStatus.successful) {
+			status = job.fileUploadSuccess();
+			if(status == UploadStatus.successful) {
 				try {
 					if(!(concatenate(job) && verifyUpload(job))) {
 						status = UploadStatus.failed;
@@ -114,7 +115,7 @@ class JobExecutor implements Runnable {
 				} catch (IOException e) {
 					log.error(e.getMessage());
 				}
-			} else if(job.fileUploadSuccess() == UploadStatus.failed){
+			} else if(status == UploadStatus.failed){
 				log.error("Upload failed: source file path " + job.getSourcePath());
 			} else {
 				log.debug("Upload Skipped: source file path " + job.getSourcePath());
