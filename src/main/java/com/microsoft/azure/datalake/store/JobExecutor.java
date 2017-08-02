@@ -113,9 +113,12 @@ class JobExecutor implements Runnable {
 						status = UploadStatus.failed;
 					}
 				} catch (IOException e) {
+					status = UploadStatus.failed;
 					log.error(e.getMessage());
 				}
-			} else if(status == UploadStatus.failed){
+			}
+			
+			if(status == UploadStatus.failed){
 				log.error("Upload failed: source file path " + job.getSourcePath());
 			} else {
 				log.debug("Upload Skipped: source file path " + job.getSourcePath());

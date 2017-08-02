@@ -159,7 +159,10 @@ class AdlsTool {
         }
         System.setProperty("http.keepAlive", "true");
         System.setProperty("http.maxConnections", (new Integer(numThreads)).toString());
-        setCipher();
+        String cipherStr = p.getProperty("adlstool.cipher");
+        if(cipherStr == null) {
+        	setCipher();
+        }
     	return numThreads;
     }
     
