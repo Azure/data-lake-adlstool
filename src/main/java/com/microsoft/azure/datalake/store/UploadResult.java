@@ -13,7 +13,7 @@ public class UploadResult {
 		totalSizeInBytes += stats.getBytesUploaded();
 		successfulUploads.addAll(stats.getSuccessfulUploads());
 		failedUploads.addAll(stats.getFailedUploads());
-		skippedUploads.addAll(stats.getSkippedUplaods());
+		skippedUploads.addAll(stats.getSkippedUploads());
 		timeTakenInMilliSeconds = Math.max(timeTakenInMilliSeconds, stats.totalTimeTakenInMilliSeconds);
 	}
 	public List<String> getSuccessfulUploads() {

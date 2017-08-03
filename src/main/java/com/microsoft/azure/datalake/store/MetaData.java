@@ -30,7 +30,7 @@ class MetaData {
 	MetaData(File sourceFile, String destinationPath) {
 		this.sourceFile = sourceFile;
 		this.destinationPath = trimTrailingSlash(destinationPath) + fileSeperator;
-		this.destinationUuidName = UUID.randomUUID().toString() + fileSeperator;
+		this.destinationUuidName = UUID.randomUUID().toString();
 		setDestinationIntermediatePath();
 	}
 	
@@ -48,8 +48,12 @@ class MetaData {
 			destinationIntermediatePath = destinationPath + sourceFileName;
 		} else {
 			destinationIntermediatePath = (destinationPath + sourceFileName + "-segments-" 
-		                                   + destinationUuidName + sourceFileName + "-");
+		                                   + destinationUuidName + fileSeperator + sourceFileName + "-");
 		}
+	}
+	
+	public String getDestinationConcatIntermediatePath() {
+		return destinationPath + destinationUuidName;
 	}
 	
 	public String getDestinationIntermediatePath() {

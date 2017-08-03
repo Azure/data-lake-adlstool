@@ -15,6 +15,7 @@ import com.microsoft.azure.datalake.store.ADLStoreClient;
 import com.microsoft.azure.datalake.store.DirectoryEntry;
 import com.microsoft.azure.datalake.store.IfExists;
 import com.microsoft.azure.datalake.store.UploadJob.JobType;
+import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 
 class JobExecutor implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
@@ -76,7 +77,7 @@ class JobExecutor implements Runnable {
 		public List<String> getFailedUploads() {
 			return failedUploads;
 		}
-		public List<String> getSkippedUplaods() {
+		public List<String> getSkippedUploads() {
 			return skippedUploads;
 		}
 	}
@@ -177,15 +178,26 @@ class JobExecutor implements Runnable {
 		if(!job.data.isSplitUpload()) return true;
 		boolean status = false;
 		String finalDestination = job.getDestinationFinalPath();
+		String intermediatePath = job.data.getDestinationConcatIntermediatePath();
 		List<String> chunkedFiles = job.data.getChunkFiles();
 		try {
-			client.delete(finalDestination);
-			status = client.concatenateFiles(finalDestination, chunkedFiles);
+			status = concatenateCall(intermediatePath, chunkedFiles, client);
+			if(status) {
+				status = client.rename(intermediatePath, finalDestination, true);
+			}
 		} catch (IOException e) {
 			log.error(e.getMessage());
 			log.error("Concatenation failed, failed to upload: " + finalDestination);
 		}
 		return status;
+	}
+	
+	boolean concatenateCall(String path, List<String> streams, ADLStoreClient client) {
+		RequestOptions opts = new RequestOptions();
+        opts.retryPolicy = new ExponentialBackoffPolicy();
+        OperationResponse resp = new OperationResponse();
+        Core.concat(path, streams, client, true, opts, resp);
+        return resp.successful;
 	}
 	/*
 	 * Verify the upload was successful for the given file.

@@ -34,7 +34,10 @@ class UploadJob implements Comparable<UploadJob>{
 	}
 	
 	public String getDestinationIntermediatePath() {
-		return data.getDestinationIntermediatePath() + (data.splits > 1 ? id : "");
+		if(data.splits > 1) {
+			return data.getDestinationIntermediatePath() + id;
+		}
+		return data.getDestinationIntermediatePath();
 	}
 	
 	public String getDestinationFinalPath() {
