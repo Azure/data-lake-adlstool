@@ -150,6 +150,7 @@ class JobExecutor implements Runnable {
 			ByteBuffer buf = ByteBuffer.wrap(data);	
 	        long totalBytesRead = 0;
 	        long dataRead = 0;
+	        srcData.skip(job.offset);
 	        FileChannel Fc = srcData.getChannel();
 	        Fc.map(FileChannel.MapMode.READ_ONLY, job.offset, job.size);
 	        buf.clear();
@@ -180,6 +181,7 @@ class JobExecutor implements Runnable {
 		String finalDestination = job.getDestinationFinalPath();
 		String intermediatePath = job.data.getDestinationConcatIntermediatePath();
 		List<String> chunkedFiles = job.data.getChunkFiles();
+		
 		try {
 			status = concatenateCall(intermediatePath, chunkedFiles, client);
 			if(status) {
