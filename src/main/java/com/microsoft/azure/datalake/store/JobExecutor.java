@@ -146,23 +146,15 @@ class JobExecutor implements Runnable {
 		try ( ADLFileOutputStream stream = client.createFile(filePath, IfExists.OVERWRITE);
 				FileInputStream srcData = new FileInputStream(job.getSourcePath());)
 		{
+			srcData.skip(job.offset);
 			byte[] data = new byte[bufSize];
-			ByteBuffer buf = ByteBuffer.wrap(data);	
 	        long totalBytesRead = 0;
 	        long dataRead = 0;
-	        srcData.skip(job.offset);
-	        FileChannel Fc = srcData.getChannel();
-	        Fc.map(FileChannel.MapMode.READ_ONLY, job.offset, job.size);
-	        buf.clear();
-	        
-	        while(totalBytesRead < job.size && 
-	        		(dataRead = Fc.read(buf)) != -1) {
-	        	int r = (int)Math.min(dataRead, job.size - totalBytesRead);
-	        	stream.write(data, 0, r);
-	            totalBytesRead += r;
-	            buf.clear();
+	        while(totalBytesRead < job.size && (dataRead = srcData.read(data)) != -1) {
+	        	int len = (int)Math.min(dataRead, job.size - totalBytesRead);
+	        	stream.write(data, 0, len);
+	        	totalBytesRead += len;
 	        }
-	        Fc.close();
 	        if(totalBytesRead != job.size) {
 	           log.error("Failed to upload: " + job.data.getSourceFilePath());
 	           return UploadStatus.failed;
