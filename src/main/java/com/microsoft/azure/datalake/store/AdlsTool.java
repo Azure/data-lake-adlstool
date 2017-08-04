@@ -23,7 +23,7 @@ import java.util.Properties;
  * The class that contains the main method for the command-line tool.
  */
 class AdlsTool {
-
+	static final int oneMB = 1024*1024;
     public static void main( String[] args ) {
         // Currently SetAcl is the only think this tool does
         // We can fill in more stuff in this method if the tool evolves to do more
@@ -118,10 +118,57 @@ class AdlsTool {
         long seconds = millis / 1000;
         long minutes = seconds / 60;
         long displayseconds = seconds % 60;
+        millis = millis%1000;
         if (minutes > 0) {
-            return String.format("%dm : %ds", minutes, displayseconds);
+            return String.format("%dm : %d.%03ds", minutes, displayseconds, millis);
         } else {
-            return String.format("%d seconds", displayseconds);
+            return String.format("%d.%03d seconds", displayseconds, millis);
+        }
+    }
+    /*
+     * User can specify chunksize in MB.
+     */
+    public static int getChunkSize(int defaultChunkSize) {
+    	Properties p = System.getProperties();
+    	String chunkSize = p.getProperty("adlstool.chunksize");
+    	int size = defaultChunkSize;
+    	if(chunkSize != null) {
+    		try {
+    			size = Integer.parseUnsignedInt(chunkSize);
+    			size = Math.min(defaultChunkSize, size*oneMB);
+    		} catch (NumberFormatException ex) {
+    			System.out.println("Illegal chunksize in system property adlstool.chunksize: " + chunkSize);
+    			System.exit(1008);
+    		}
+    	}
+    	return size;
+    }
+    
+    public static int threadSetup() {
+        // Determine the number of threads to use
+        int numThreads = Runtime.getRuntime().availableProcessors() * 10; // heuristic: 10 times number of processors
+        Properties p = System.getProperties();
+        String threadStr = p.getProperty("adlstool.threads");
+        if (threadStr != null) {
+            try {
+            	numThreads = Integer.parseUnsignedInt(threadStr);
+            } catch (NumberFormatException ex) {
+                System.out.println("Illegal threadcount in system property adlstool.threads : " + threadStr);
+                System.exit(1008);
+            }
+        }
+        System.setProperty("http.keepAlive", "true");
+        System.setProperty("http.maxConnections", (new Integer(numThreads)).toString());
+        String cipherStr = p.getProperty("adlstool.cipher");
+        if(cipherStr == null) {
+        	setCipher();
+        }
+    	return numThreads;
+    }
+    
+    public static void setCipher() {
+    	if(System.getProperty("java.runtime.version").startsWith("1.8.")) {
+        	System.setProperty("https.cipherSuites", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256");
         }
     }
 
@@ -130,7 +177,10 @@ class AdlsTool {
         System.out.println("ADLS Java command-line tool");
         System.out.println("Usage:");
         System.out.println("  adlstool <modifyacl|removeacl> <credfile> <path> \"<aclspec>\"");
+        System.out.println("  adlstool upload <credfile> <sourcePath> <destinationPath> [overwrite]");
         System.out.println();
+        System.out.println("For upload:");
+        System.out.println("  overwrite= Optional paramter. Specify overwrite, if destination files with same names should be overwritten");
         System.out.println();
         System.out.println("Where <credfile> is the path to a java property file that contains the following properties:");
         System.out.println("  account= fully qualified domain name of the Azure Data Lake Store account");

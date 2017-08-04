@@ -4,7 +4,7 @@
   <groupId>com.microsoft.azure.datalake.store</groupId>
   <artifactId>AdlsTool</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.1</version>
+  <version>1.1.0</version>
 
   <name>Azure Data Lake Store Tools for Java</name>
   <url>http://aka.ms/adlsdtool</url>
@@ -122,7 +122,7 @@
               <Built-By>Microsoft Corporation</Built-By>
             </manifestEntries>
           </archive>
-          <finalName>AdlsTool-1.0.1-Full</finalName>
+          <finalName>AdlsTool-1.1.0-Full</finalName>
           <appendAssemblyId>false</appendAssemblyId>
         </configuration>
         <executions>
@@ -165,7 +165,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-data-lake-store-sdk</artifactId>
-      <version>2.1.5</version>
+      <version>2.2.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
