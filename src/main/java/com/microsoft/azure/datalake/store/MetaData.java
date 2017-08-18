@@ -1,11 +1,15 @@
 package com.microsoft.azure.datalake.store;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.swing.JPopupMenu.Separator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,42 +17,71 @@ import org.slf4j.LoggerFactory;
 import com.microsoft.azure.datalake.store.JobExecutor.UploadStatus;
 
 class MetaData {
-	private static final char fileSeperator = '/';
+	private static final char adlsFileSeparator = '/';
+	private static final char localFileSeparator = File.separatorChar;
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
-	String destinationPath, destinationUuidName;
+	String destinationPath, destinationUuidName, destinationFinalPath;
+	String sourceFileName, sourceFilePath;
 	String destinationIntermediatePath = null;
-	File sourceFile;
+	File sourceFile, destinationIntermediateFile, destinationFile;
+	DirectoryEntry sourceEntry;
 	long splits;
 	AtomicLong doneCount = new AtomicLong(0);
 	UploadStatus status = UploadStatus.successful;
 	Boolean existsAtDestination = null;
-
 	
 	
 	// Constructor called by producer. Perform all the one time operations here.
 	// all other class functions are called by concurrent consumers.
 	MetaData(File sourceFile, String destinationPath) {
 		this.sourceFile = sourceFile;
-		this.destinationPath = trimTrailingSlash(destinationPath) + fileSeperator;
+		this.destinationPath = trimTrailingSlash(destinationPath, adlsFileSeparator) + adlsFileSeparator;
 		this.destinationUuidName = UUID.randomUUID().toString();
-		setDestinationIntermediatePath();
+		this.sourceFileName = sourceFile.getName();
+		this.sourceFilePath = sourceFile.getAbsolutePath();
+		setDestinationIntermediatePath(sourceFile.length());
+		this.destinationFinalPath = this.destinationPath + this.sourceFileName;
+	}
+	
+	MetaData(DirectoryEntry sourceFile, String destinationPath) {
+		log.debug("S: " + sourceFile + " D: " + destinationPath);
+		this.sourceEntry = sourceFile;
+		this.sourceFilePath = sourceFile.fullName;
+		this.sourceFileName = sourceFile.name;
+		this.destinationUuidName = UUID.randomUUID().toString();
+		this.destinationPath = trimTrailingSlash(destinationPath, localFileSeparator) + localFileSeparator;
+		createDestinationIntermediatePath(sourceFile.length);
+		this.destinationFinalPath = this.destinationPath + this.sourceFileName;
+		destinationIntermediateFile = new File(destinationIntermediatePath);
+		destinationFile = new File(destinationFinalPath);
 	}
 	
 	public String getSourceFilePath() {
-		return sourceFile.getAbsolutePath();
+		return sourceFilePath;
 	}
 	/*
 	 * To avoid renaming, if the file size is less than chunkSize there is no
 	 * intermediate UUID name.
 	 */
-	private void setDestinationIntermediatePath() {
-		splits = EnumerateFile.getNumberOfFileChunks(sourceFile.length());
+	private void setDestinationIntermediatePath(long length) {
+		splits = EnumerateFile.getNumberOfFileChunks(length);
 		String sourceFileName = sourceFile.getName();
 		if(splits == 1) {
 			destinationIntermediatePath = destinationPath + sourceFileName;
 		} else {
 			destinationIntermediatePath = (destinationPath + sourceFileName + "-segments-" 
-		                                   + destinationUuidName + fileSeperator + sourceFileName + "-");
+		                                   + destinationUuidName + adlsFileSeparator + sourceFileName + "-");
+		}
+	}
+	
+	private void createDestinationIntermediatePath(long length) {
+		splits = EnumerateFile.getNumberOfFileChunks(length);
+		String path = destinationPath;
+		File destinationPathFile;
+		destinationIntermediatePath = destinationPath + sourceFileName + "-" + destinationUuidName;
+		destinationPathFile = new File(path);
+		if(!destinationPathFile.exists()) {
+			destinationPathFile.mkdirs();
 		}
 	}
 	
@@ -61,7 +94,7 @@ class MetaData {
 	}
 	
 	public String getDestinationFinalPath() {
-		return destinationPath + sourceFile.getName();
+		return destinationFinalPath;
 	}
 	
 	public boolean isSplitUpload() {
@@ -85,9 +118,10 @@ class MetaData {
 		return splits == doneCount.incrementAndGet();
 	}
 	
-	private static String trimTrailingSlash(String inStr) {
+	private static String trimTrailingSlash(String inStr, char separator) {
+		log.debug("DEST:" + inStr);
 		int i = inStr.length()-1;
-		while(i >= 0 && inStr.charAt(i) == '/') {
+		while(i >= 0 && inStr.charAt(i) == separator) {
 			i--;
 		}
 		return inStr.substring(0, i+1);

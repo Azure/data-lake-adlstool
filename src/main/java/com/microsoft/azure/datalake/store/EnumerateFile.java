@@ -1,6 +1,8 @@
 package com.microsoft.azure.datalake.store;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,21 +15,78 @@ class EnumerateFile implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
 	private ProcessingQueue<MetaData> metaDataQ;
 	private ConsumerQueue<UploadJob> jobQ;
-	private static int chunkSize = 256 * 1024 * 1024; // 256 MB
-	private static int threshhold = 356 * 1024 * 1024; // 356 MB
-	private long bytesToUpload;
+	private static long chunkSize = 64 * 1024 * 1024; // 256 MB
+	private static long threshhold = 64 * 1024 * 1024; // 356 MB
+	private long bytesToTransmit;
+	private boolean isDownload = true;
+	private ADLStoreClient client;
+	private static int maxEntries = 20;
 	
 	EnumerateFile(File srcDir, String destination, ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ) {
 		this.metaDataQ = metaDataQ;
 		this.jobQ = jobQ;
-		int size = AdlsTool.getChunkSize(chunkSize);
+		this.isDownload = false;
+		long size = AdlsTool.getChunkSize(chunkSize);
 		if(size != chunkSize) {
 			chunkSize = size;
 			threshhold = size;
 		}
 		metaDataQ.add(new MetaData(srcDir, destination));
 	}
+	
+	EnumerateFile(DirectoryEntry source, String destination, 
+			      ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ, ADLStoreClient client) {
+		log.debug("DEStination: " + destination);
+		this.metaDataQ = metaDataQ;
+		this.jobQ = jobQ;
+		this.isDownload = true;
+		long size = AdlsTool.getChunkSize(chunkSize);
+		if(size != chunkSize) {
+			chunkSize = size;
+			threshhold = size;
+		}
+		this.client = client;
+		metaDataQ.add(new MetaData(source, destination));
+	}
 	public void run() {
+		if(isDownload) {
+			enumerateAdlsFiles();
+		} else {
+			enumerateLocalFiles();
+		}
+	}
+	
+	private void enumerateAdlsFiles() {
+		MetaData front;
+		while((front = metaDataQ.poll()) != null) {
+			DirectoryEntry source = front.sourceEntry;
+			log.debug("Polled: " + front.sourceFilePath);
+			if(source.type == DirectoryEntryType.DIRECTORY) {
+				log.debug("Enumerating ddirectory " + source.fullName);
+				try {
+					List<DirectoryEntry> subDir = client.enumerateDirectory(source.fullName, maxEntries);
+
+					while(subDir != null && subDir.size() != 0) {
+						String dstPrefix = front.getDestinationFinalPath();
+						String lastEntry = null;
+						for(DirectoryEntry dEntry: subDir) {
+							lastEntry = dEntry.fullName;
+							metaDataQ.add(new MetaData(dEntry, dstPrefix));
+						}
+						subDir = client.enumerateDirectory(source.fullName, maxEntries, lastEntry);
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} else if(source.type == DirectoryEntryType.FILE) {
+				generateDownloadFileJob(front);
+			}
+			metaDataQ.unregister();
+		}
+	}
+	
+	
+	private void enumerateLocalFiles() {
 		MetaData front;
 		while((front = metaDataQ.poll()) != null) {
 			try {
@@ -72,11 +131,28 @@ class EnumerateFile implements Runnable {
 		} while(offset < front.size());
 		log.debug("Generated " + front.splits + " number of upload jobs for file " 
 				+ front.getSourceFilePath() + " with destination " + front.getDestinationIntermediatePath());
-		bytesToUpload += front.size();
+		bytesToTransmit += front.size();
 	}
 	
-	public long getBytesToUpload() {
-		return bytesToUpload;
+	private void generateDownloadFileJob(MetaData entry) {
+		long size = 0, chunks = 0, offset = 0;
+		long totalLength = entry.sourceEntry.length;
+		do {
+			if(totalLength - offset <= threshhold) {
+				size = totalLength - offset;
+			} else {
+				size = chunkSize;
+			}
+			jobQ.add(new UploadJob(entry, offset, size, chunks, JobType.FILEDOWNLOAD));
+			chunks++;
+			offset += size;
+		} while(offset < totalLength);
+		bytesToTransmit += totalLength;
+		log.debug("Generated " + chunks + " number of downlaod jobs for size: " + totalLength);
+	}
+	
+	public long getBytesToTransmit() {
+		return bytesToTransmit;
 	}
 	
 	static long getNumberOfFileChunks(long size) {

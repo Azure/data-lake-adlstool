@@ -10,7 +10,7 @@ public class UploadResult {
 	public List<String> failedUploads = new LinkedList<>();
 	public List<String> skippedUploads = new LinkedList<>();
 	public void update(JobExecutor.Stats stats) {
-		totalSizeInBytes += stats.getBytesUploaded();
+		totalSizeInBytes += stats.getBytesTransferred();
 		successfulUploads.addAll(stats.getSuccessfulUploads());
 		failedUploads.addAll(stats.getFailedUploads());
 		skippedUploads.addAll(stats.getSkippedUploads());

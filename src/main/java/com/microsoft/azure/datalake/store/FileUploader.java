@@ -3,6 +3,7 @@ package com.microsoft.azure.datalake.store;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.PriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,7 @@ public class FileUploader {
 	
 	public FileUploader(ADLStoreClient client, IfExists overwriteOption) {
 		metaDataQ = new ProcessingQueue<MetaData>();
-		jobQ = new ConsumerQueue<UploadJob>(new PriorityQueue<UploadJob>());
+		jobQ = new ConsumerQueue<UploadJob>(new LinkedList<UploadJob>());
 		uploaderThreadCount = AdlsTool.threadSetup();
 		this.client = client;
 		this.overwrite = overwriteOption;
@@ -40,6 +41,21 @@ public class FileUploader {
 	public static UploadResult upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
 		FileUploader F = new FileUploader(client, overwriteOption);
 		return F.uploadInternal(source, destination);
+	}
+	
+	public static UploadResult download(String source, String destination, ADLStoreClient client, IfExists overwriteOption) {
+		FileUploader F = new FileUploader(client, overwriteOption);
+		DirectoryEntry entry = null;
+		UploadResult R = null;
+		
+		try {
+			entry = client.getDirectoryEntry(source);
+			R = F.download(entry, destination);
+		} catch (IOException | InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return R;
 	}
 	
 	private UploadResult uploadInternal(String source, String destination) throws InterruptedException, IOException {
@@ -92,6 +108,22 @@ public class FileUploader {
 		return t;
 	}
 	
+	private Thread startEnumeration(DirectoryEntry source, String destination) {
+		jobGen = new EnumerateFile(source, destination, metaDataQ, jobQ, client);
+		Thread t = new Thread(jobGen);
+		t.start();
+		return t;
+	}
+	
+	private UploadResult download(DirectoryEntry source, String destination) throws IOException, InterruptedException {
+		Thread generateJob = startEnumeration(source, destination);
+		startUploaderThreads(jobQ);
+		Thread statusThread = waitForCompletion(generateJob);
+		UploadResult R = joinUploaderThreads();
+		statusThread.interrupt();
+		return R;
+	}
+	
 	private UploadResult upload(File source, String destination) throws IOException, InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
@@ -104,7 +136,7 @@ public class FileUploader {
 	private Thread waitForCompletion(Thread generateJob) throws InterruptedException {
 		generateJob.join();
 		jobQ.markComplete(); // Consumer threads wait until enumeration is active.
-		StatusBar statusBar = new StatusBar(jobGen.getBytesToUpload(), executor);
+		StatusBar statusBar = new StatusBar(jobGen.getBytesToTransmit(), executor);
 		Thread status = new Thread(statusBar);  // start a status bar.
 		status.start();
 		return status;
@@ -151,10 +183,10 @@ public class FileUploader {
 				}
 				long bytesUploaded = 0;
 				for(int i = 0; i < uploaders.length; i++) {
-					bytesUploaded += executor[i].stats.getBytesUploaded();
+					bytesUploaded += executor[i].stats.getBytesTransferred();
 				}
 				percent = (int) ((100.0*bytesUploaded)/totalBytesToUpload);
-				System.out.printf("%% Uploaded: %d\r", percent);
+				System.out.printf("%% Complete: %d\r", percent);
 			}
 		}
 		

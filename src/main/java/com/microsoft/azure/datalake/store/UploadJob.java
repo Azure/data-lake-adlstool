@@ -6,7 +6,7 @@ class UploadJob implements Comparable<UploadJob>{
 	MetaData data;
 	long offset, id, size;
 	enum JobType {
-		MKDIR, FILEUPLOAD, CONCATENATE, VERIFY
+		MKDIR, FILEUPLOAD, CONCATENATE, VERIFY, FILEDOWNLOAD
 	}
 	JobType type;
 	UploadJob(MetaData data, long offset, long size, long id, JobType type) {
@@ -25,7 +25,7 @@ class UploadJob implements Comparable<UploadJob>{
 		return data.isFinalUpload();
 	}
 	
-	public UploadStatus fileUploadSuccess() {
+	public UploadStatus fileUploadStatus() {
 		return data.getUploadStatus();
 	}
 	

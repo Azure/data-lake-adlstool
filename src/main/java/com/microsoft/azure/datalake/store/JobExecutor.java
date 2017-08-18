@@ -1,9 +1,23 @@
 package com.microsoft.azure.datalake.store;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.RandomAccessFile;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -37,10 +51,10 @@ class JobExecutor implements Runnable {
 		int numberOfChunksUploaded;
 		int numberOfFailedUploads;
 		long totalTimeTakenInMilliSeconds = 0;
-		AtomicLong totalBytesUploaded = new AtomicLong(0);
-		List<String> successfulUploads = new LinkedList<String>();
-		List<String> failedUploads = new LinkedList<>();
-		List<String> skippedUploads = new LinkedList<>();
+		AtomicLong totalBytesTransmitted = new AtomicLong(0);
+		List<String> successfulTransfers = new LinkedList<String>();
+		List<String> failedTransfers = new LinkedList<>();
+		List<String> skippedTransfers = new LinkedList<>();
 		
 		public void begin() {
 			totalTimeTakenInMilliSeconds = System.currentTimeMillis();
@@ -51,34 +65,34 @@ class JobExecutor implements Runnable {
 		public void updateChunkStats(UploadStatus status, long size) {
 			if(status == UploadStatus.successful) {
 				numberOfChunksUploaded++;
-				totalBytesUploaded.addAndGet(size);
+				totalBytesTransmitted.addAndGet(size);
 			} else if(status == UploadStatus.failed){
 				numberOfFailedUploads++;
 			}
 		}
 		
-		public long getBytesUploaded() {
-			return totalBytesUploaded.get();
+		public long getBytesTransferred() {
+			return totalBytesTransmitted.get();
 		}
 		
 		public void addUploadedItem(UploadJob job, UploadStatus status) {
 			if(status == UploadStatus.successful) {
-				successfulUploads.add(job.getSourcePath());
+				successfulTransfers.add(job.getSourcePath());
 			} else if(status == UploadStatus.failed){
-				failedUploads.add(job.getSourcePath());
+				failedTransfers.add(job.getSourcePath());
 			} else {
-				skippedUploads.add(job.getSourcePath());
+				skippedTransfers.add(job.getSourcePath());
 			}
 			
 		}
 		public List<String> getSuccessfulUploads() {
-			return successfulUploads;
+			return successfulTransfers;
 		}
 		public List<String> getFailedUploads() {
-			return failedUploads;
+			return failedTransfers;
 		}
 		public List<String> getSkippedUploads() {
-			return skippedUploads;
+			return skippedTransfers;
 		}
 	}
 	
@@ -97,17 +111,80 @@ class JobExecutor implements Runnable {
 				mkDir(job);
 			} else if(job.type == JobType.FILEUPLOAD){
 				uploadFile(job);
+			} else if(job.type == JobType.FILEDOWNLOAD) {
+				log.debug("Started downloading " + job.getSourcePath());
+				downloadFile(job);
 			}
 		}
 		stats.end();
+		log.debug("Done uploading file");
 	}
+	
+	void downloadFile(UploadJob job) {
+		UploadStatus status = downloadFileInternal(job);
+		job.updateStatus(status);
+		stats.updateChunkStats(status, job.size);
+		if(job.isFinalUpload()) {
+			if(!skipDownload(job)) {
+				status = job.fileUploadStatus();
+			}
+			if(status == UploadStatus.successful) {
+				if(!(renameLocalFile(job) && verifyDownload(job))) {
+					status = UploadStatus.failed;
+				}
+			}
+			if(status == UploadStatus.failed){
+				log.error("Download failed: source file path " + job.getSourcePath());
+			} else if(status == UploadStatus.skipped){
+				log.debug("Downloadload Skipped: source file path " + job.getSourcePath());
+			}
+			stats.addUploadedItem(job, status);
+		}
+	}
+	
+	boolean renameLocalFile(UploadJob job) {
+		Path source = Paths.get(job.data.destinationIntermediatePath);
+		Path destination = Paths.get(job.data.destinationFinalPath);
+		try {
+			source = Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING);
+			return Files.isSameFile(source, destination);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	UploadStatus downloadFileInternal(UploadJob job) {
+		if(skipDownload(job)) {
+			return UploadStatus.skipped;
+		}
+		File file = job.data.destinationIntermediateFile;
+		
+		try ( ADLFileInputStream stream = client.getReadStream(job.getSourcePath());
+				RandomAccessFile fileStream = new RandomAccessFile(file, "rw")) {
+			stream.seek(job.offset);
+			fileStream.seek(job.offset);
+			byte[] data = new byte[4*1024*1024];
+			long totalBytesRead = 0, bytesRead;
+			while(totalBytesRead < job.size && (bytesRead = stream.read(data)) != -1) {
+				int write = (int) Math.min(bytesRead, job.size - totalBytesRead);
+				totalBytesRead += write;
+				fileStream.write(data, 0, write);
+			}
+		} catch (IOException e) {
+			log.error(e.getMessage());
+			log.error("Error downloading file " + job.getSourcePath());
+		}
+		return UploadStatus.successful;
+	}
+	
 	
 	void uploadFile(UploadJob job){
 		UploadStatus status = uploadFileInternal(job);
 		job.updateStatus(status);
 		stats.updateChunkStats(status, job.size);
 		if(job.isFinalUpload()) {
-			status = job.fileUploadSuccess();
+			status = job.fileUploadStatus();
 			if(status == UploadStatus.successful) {
 				try {
 					if(!(concatenate(job) && verifyUpload(job))) {
@@ -135,6 +212,16 @@ class JobExecutor implements Runnable {
 		} else {
 			// check to see if there is already a file with same name at the destination.
 			return job.existsAtDestination(client);
+		}
+	}
+	
+	boolean skipDownload(UploadJob job) {
+		if(overwrite == IfExists.OVERWRITE) {
+			// overwrite option is provided by the user. Proceed to download the file.
+			return false;
+		} else {
+			// check to see if there is already a file with same name at the destination.
+			return job.data.destinationFile.exists();
 		}
 	}
 	
@@ -207,6 +294,10 @@ class JobExecutor implements Runnable {
 		}
 		log.debug(job.getSourcePath() + " verification successful");
 		return true;
+	}
+	
+	boolean verifyDownload(UploadJob job) {
+		return job.data.destinationFile.length() == job.data.sourceEntry.length;
 	}
 	
 	void mkDir(UploadJob job) {
