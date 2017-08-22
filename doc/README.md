@@ -29,7 +29,10 @@ The ACL tool is available for both Windows and Linux, you can download the tool 
 ADLS Java command-line tool
 Usage:
   adlstool <modifyacl|removeacl> <credfile> <path> "<aclspec>"
+  adlstool upload <credfile> <sourcePath> <destinationPath> [overwrite]
 
+For upload:
+  overwrite= Optional paramter. Specify overwrite, if destination files with same names should be overwritten
 
 Where <credfile> is the path to a java property file that contains the following properties:
   account= fully qualified domain name of the Azure Data Lake Store account
