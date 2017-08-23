@@ -1,7 +1,9 @@
 # Apply ACLs recursively, Upload files/folders from local machine to ADLS 
 
 This utility allows users to:
+
 	a. recursively apply ACLs to their folders & files in [Azure Data Lake Store](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-overview). The tool is purpose built to solve the specific problem of applying recursive ACLs and in the future we plan to integrate this into our SDKs and CLI tools.
+
 	b. Upload files/folders from local machine to ADLS. The tool employs multiple threads to upload data thus providing high throughput. 
 
 You can download the latest version of this tool from [here](http://aka.ms/adlstool-download) 
