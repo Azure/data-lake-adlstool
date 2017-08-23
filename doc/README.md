@@ -1,6 +1,8 @@
-# Apply ACLs recursively 
+# Apply ACLs recursively, Upload files/folders from local machine to ADLS 
 
-This utility allows users to recursively apply ACLs to their folders & files in [Azure Data Lake Store](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-overview). The tool is purpose built to solve the specific problem of applying recursive ACLs and in the future we plan to integrate this into our SDKs and CLI tools.
+This utility allows users to:
+	a. recursively apply ACLs to their folders & files in [Azure Data Lake Store](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-overview). The tool is purpose built to solve the specific problem of applying recursive ACLs and in the future we plan to integrate this into our SDKs and CLI tools.
+	b. Upload files/folders from local machine to ADLS. The tool employs multiple threads to upload data thus providing high throughput. 
 
 You can download the latest version of this tool from [here](http://aka.ms/adlstool-download) 
 
@@ -166,6 +168,17 @@ adlstool modifyacl newcred.cred "\rectest2" user:c1cdf024-1a48-41a9-ad14-c1f262b
 ```
 
 Once the tool successfully completes, you ACLs have been applied, we expected <10 mins to apply ACLs to ~ 1 million objects. You can use the Azure Portal to verify that the ACLs have been set by check a sample of file and folders in your path. 
+
+
+```
+adlstool upload newcred.cred /local/data.txt /home 
+```
+This copies data.txt file in the local machine to ADLS under /home directory.
+
+```
+adlstool upload newcred.cred /local/ /home 
+```
+This copies the entire directory and its subdirectories into ADLS under /home/directory.
 
 ## Best Practices & FAQ
 
