@@ -178,7 +178,7 @@ This copies data.txt file in the local machine to ADLS under /home directory.
 ```
 adlstool upload newcred.cred /local/ /home 
 ```
-This copies the entire directory and its subdirectories into ADLS under /home/directory.
+This copies the entire directory and its subdirectories into ADLS under /home/ directory.
 
 ## Best Practices & FAQ
 
