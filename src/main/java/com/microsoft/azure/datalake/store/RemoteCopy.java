@@ -13,8 +13,8 @@ import com.microsoft.azure.datalake.store.DirectoryEntry;
 import com.microsoft.azure.datalake.store.DirectoryEntryType;
 
 
-public class FileUploader {
-	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
+public class RemoteCopy {
+	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.RemoteCopy");
 	private static int threadCount;
 	private ProcessingQueue<MetaData> metaDataQ;
 	private ConsumerQueue<Job> jobQ;
@@ -24,7 +24,7 @@ public class FileUploader {
 	private IfExists overwrite;
 	private EnumerateFile jobGen;
 	
-	public FileUploader(ADLStoreClient client, IfExists overwriteOption) {
+	public RemoteCopy(ADLStoreClient client, IfExists overwriteOption) {
 		metaDataQ = new ProcessingQueue<MetaData>();
 		jobQ = new ConsumerQueue<Job>(new PriorityQueue<Job>());
 		threadCount = AdlsTool.threadSetup();
@@ -39,12 +39,12 @@ public class FileUploader {
 	 * @param client ADLStoreClient to use to upload the file.
 	 */
 	public static Stats upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
-		FileUploader F = new FileUploader(client, overwriteOption);
+		RemoteCopy F = new RemoteCopy(client, overwriteOption);
 		return F.uploadInternal(source, destination);
 	}
 	
 	public static Stats download(String source, String destination, ADLStoreClient client, IfExists overwriteOption) {
-		FileUploader F = new FileUploader(client, overwriteOption);
+		RemoteCopy F = new RemoteCopy(client, overwriteOption);
 		DirectoryEntry entry = null;
 		Stats R = new Stats();
 		

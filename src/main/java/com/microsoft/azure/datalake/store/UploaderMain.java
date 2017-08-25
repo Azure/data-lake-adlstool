@@ -30,7 +30,7 @@ public class UploaderMain {
         IfExists overwriteOption = overwrite != null ? IfExists.OVERWRITE : IfExists.FAIL; 
         try {
             long start = System.currentTimeMillis();
-            Stats R = FileUploader.upload(srcPath, dstPath, client, overwriteOption);
+            Stats R = RemoteCopy.upload(srcPath, dstPath, client, overwriteOption);
             long stop = System.currentTimeMillis();
 
             if(R.getSkippedTransfers().size() + R.getFailedTransfers().size() == 0) {
@@ -42,10 +42,11 @@ public class UploaderMain {
             System.out.println("# of Files Uploaded: " + R.getSuccessfulTransfers().size());
             System.out.println("Total number of Bytes uploaded: " + R.totalSizeInBytes);
             if(R.getSkippedTransfers().size() + R.getFailedTransfers().size() > 0) {
-            	System.out.println("Files skipped or failed upload:");
+            	System.out.println("Failed uploads:");
                 for(String file: R.getFailedTransfers()) {
                 	System.out.println('\t' + file);
                 }
+                System.out.println("Files skipped");
                 for(String file: R.getSkippedTransfers()) {
                 	System.out.println('\t' + file);
                 }
