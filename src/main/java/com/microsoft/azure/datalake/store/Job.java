@@ -2,14 +2,14 @@ package com.microsoft.azure.datalake.store;
 
 import com.microsoft.azure.datalake.store.JobExecutor.UploadStatus;
 
-class UploadJob implements Comparable<UploadJob>{
+class Job implements Comparable<Job>{
 	MetaData data;
 	long offset, id, size;
 	enum JobType {
 		MKDIR, FILEUPLOAD, CONCATENATE, VERIFY, FILEDOWNLOAD
 	}
 	JobType type;
-	UploadJob(MetaData data, long offset, long size, long id, JobType type) {
+	Job(MetaData data, long offset, long size, long id, JobType type) {
 		this.data = data;
 		this.offset = offset;
 		this.size = size;
@@ -17,7 +17,10 @@ class UploadJob implements Comparable<UploadJob>{
 		this.type = type;
 	}
 
-	public int compareTo(UploadJob that) {
+	public int compareTo(Job that) {
+		if(this.size == that.size) {
+			return Long.compare(this.id, that.id);
+		}
 		return Long.compare(that.size, this.size);
 	}
 	

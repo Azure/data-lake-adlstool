@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.microsoft.azure.datalake.store.UploadJob.JobType;;
+import com.microsoft.azure.datalake.store.Job.JobType;;
 /*
  * Enumerates the given Directory and populates the upload jobs
  */
@@ -14,15 +14,15 @@ import com.microsoft.azure.datalake.store.UploadJob.JobType;;
 class EnumerateFile implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
 	private ProcessingQueue<MetaData> metaDataQ;
-	private ConsumerQueue<UploadJob> jobQ;
+	private ConsumerQueue<Job> jobQ;
 	private static long chunkSize = 64 * 1024 * 1024; // 256 MB
 	private static long threshhold = 64 * 1024 * 1024; // 356 MB
 	private long bytesToTransmit;
 	private boolean isDownload = true;
 	private ADLStoreClient client;
-	private static int maxEntries = 20;
+	private static int maxEntries = 2000;
 	
-	EnumerateFile(File srcDir, String destination, ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ) {
+	EnumerateFile(File srcDir, String destination, ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<Job> jobQ) {
 		this.metaDataQ = metaDataQ;
 		this.jobQ = jobQ;
 		this.isDownload = false;
@@ -35,8 +35,7 @@ class EnumerateFile implements Runnable {
 	}
 	
 	EnumerateFile(DirectoryEntry source, String destination, 
-			      ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<UploadJob> jobQ, ADLStoreClient client) {
-		log.debug("DEStination: " + destination);
+			      ProcessingQueue<MetaData> metaDataQ, ConsumerQueue<Job> jobQ, ADLStoreClient client) {
 		this.metaDataQ = metaDataQ;
 		this.jobQ = jobQ;
 		this.isDownload = true;
@@ -60,21 +59,18 @@ class EnumerateFile implements Runnable {
 		MetaData front;
 		while((front = metaDataQ.poll()) != null) {
 			DirectoryEntry source = front.sourceEntry;
-			log.debug("Polled: " + front.sourceFilePath);
 			if(source.type == DirectoryEntryType.DIRECTORY) {
-				log.debug("Enumerating ddirectory " + source.fullName);
 				try {
-					List<DirectoryEntry> subDir = client.enumerateDirectory(source.fullName, maxEntries);
-
-					while(subDir != null && subDir.size() != 0) {
+					List<DirectoryEntry> subDir;
+					String lastEntry = null;
+					do {
+						subDir = client.enumerateDirectory(source.fullName, maxEntries, lastEntry);
 						String dstPrefix = front.getDestinationFinalPath();
-						String lastEntry = null;
 						for(DirectoryEntry dEntry: subDir) {
-							lastEntry = dEntry.fullName;
+							lastEntry = dEntry.name;
 							metaDataQ.add(new MetaData(dEntry, dstPrefix));
 						}
-						subDir = client.enumerateDirectory(source.fullName, maxEntries, lastEntry);
-					}
+					} while(subDir.size() >= maxEntries);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -114,7 +110,7 @@ class EnumerateFile implements Runnable {
 	}
 	
 	private void generateMkDirJob(MetaData front) {
-		jobQ.add(new UploadJob(front, 0, 0, 0, JobType.MKDIR));
+		jobQ.add(new Job(front, 0, 0, 0, JobType.MKDIR));
 	}
 	
 	private void generateUploadJob(MetaData front) {
@@ -125,7 +121,7 @@ class EnumerateFile implements Runnable {
 			} else {
 				size = chunkSize;
 			}
-			jobQ.add(new UploadJob(front, offset, size, chunks, JobType.FILEUPLOAD));
+			jobQ.add(new Job(front, offset, size, chunks, JobType.FILEUPLOAD));
 			chunks++;
 			offset += size;
 		} while(offset < front.size());
@@ -143,7 +139,7 @@ class EnumerateFile implements Runnable {
 			} else {
 				size = chunkSize;
 			}
-			jobQ.add(new UploadJob(entry, offset, size, chunks, JobType.FILEDOWNLOAD));
+			jobQ.add(new Job(entry, offset, size, chunks, JobType.FILEDOWNLOAD));
 			chunks++;
 			offset += size;
 		} while(offset < totalLength);

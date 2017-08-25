@@ -30,23 +30,23 @@ public class UploaderMain {
         IfExists overwriteOption = overwrite != null ? IfExists.OVERWRITE : IfExists.FAIL; 
         try {
             long start = System.currentTimeMillis();
-            UploadResult R = FileUploader.upload(srcPath, dstPath, client, overwriteOption);
+            Stats R = FileUploader.upload(srcPath, dstPath, client, overwriteOption);
             long stop = System.currentTimeMillis();
 
-            if(R.getSkippedUploads().size() + R.getFailedUploads().size() == 0) {
+            if(R.getSkippedTransfers().size() + R.getFailedTransfers().size() == 0) {
             	System.out.println("SUCCESSFULLY COMPLETE");
             } else {
             	System.out.println("UPLOAD FAILED FOR FEW FILES");
             }
             System.out.println("Time taken: " + AdlsTool.timeString(stop - start));
-            System.out.println("# of Files Uploaded: " + R.getSuccessfulUploads().size());
+            System.out.println("# of Files Uploaded: " + R.getSuccessfulTransfers().size());
             System.out.println("Total number of Bytes uploaded: " + R.totalSizeInBytes);
-            if(R.getSkippedUploads().size() + R.getFailedUploads().size() > 0) {
+            if(R.getSkippedTransfers().size() + R.getFailedTransfers().size() > 0) {
             	System.out.println("Files skipped or failed upload:");
-                for(String file: R.getFailedUploads()) {
+                for(String file: R.getFailedTransfers()) {
                 	System.out.println('\t' + file);
                 }
-                for(String file: R.getSkippedUploads()) {
+                for(String file: R.getSkippedTransfers()) {
                 	System.out.println('\t' + file);
                 }
             }

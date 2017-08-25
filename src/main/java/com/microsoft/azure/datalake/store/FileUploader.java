@@ -15,9 +15,9 @@ import com.microsoft.azure.datalake.store.DirectoryEntryType;
 
 public class FileUploader {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
-	private static int uploaderThreadCount;
+	private static int threadCount;
 	private ProcessingQueue<MetaData> metaDataQ;
-	private ConsumerQueue<UploadJob> jobQ;
+	private ConsumerQueue<Job> jobQ;
 	private ADLStoreClient client;
 	private Thread[] executorThreads;
 	private JobExecutor[] executor;
@@ -26,8 +26,8 @@ public class FileUploader {
 	
 	public FileUploader(ADLStoreClient client, IfExists overwriteOption) {
 		metaDataQ = new ProcessingQueue<MetaData>();
-		jobQ = new ConsumerQueue<UploadJob>(new LinkedList<UploadJob>());
-		uploaderThreadCount = AdlsTool.threadSetup();
+		jobQ = new ConsumerQueue<Job>(new PriorityQueue<Job>());
+		threadCount = AdlsTool.threadSetup();
 		this.client = client;
 		this.overwrite = overwriteOption;
 	}
@@ -38,27 +38,34 @@ public class FileUploader {
 	 * @param destination Destination directory to copy the files to.
 	 * @param client ADLStoreClient to use to upload the file.
 	 */
-	public static UploadResult upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
+	public static Stats upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
 		FileUploader F = new FileUploader(client, overwriteOption);
 		return F.uploadInternal(source, destination);
 	}
 	
-	public static UploadResult download(String source, String destination, ADLStoreClient client, IfExists overwriteOption) {
+	public static Stats download(String source, String destination, ADLStoreClient client, IfExists overwriteOption) {
 		FileUploader F = new FileUploader(client, overwriteOption);
 		DirectoryEntry entry = null;
-		UploadResult R = null;
+		Stats R = new Stats();
 		
 		try {
 			entry = client.getDirectoryEntry(source);
+		} catch (IOException e) {
+			log.error("Error collecting details of source from ADLS");
+			log.error(e.getMessage());
+			System.out.println("Unable to collect details of source: " + source + " from ADLS");
+			R.failedTransfers.add(source);
+			return R;
+		}
+		try {
 			R = F.download(entry, destination);
 		} catch (IOException | InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error(e.getMessage());
 		}
 		return R;
 	}
 	
-	private UploadResult uploadInternal(String source, String destination) throws InterruptedException, IOException {
+	private Stats uploadInternal(String source, String destination) throws InterruptedException, IOException {
 		if(source == null) {
 			throw new IllegalArgumentException("source is null");
 		} else if(destination == null) {
@@ -80,7 +87,7 @@ public class FileUploader {
 		
 		if(!isDirectory(srcDir)) {
 			if(!verifyDestination(destination)) {
-				return new UploadResult();
+				return new Stats();
 			}
 		}
 		
@@ -91,9 +98,9 @@ public class FileUploader {
 		return inFile.listFiles() != null;
 	}
 	
-	private void startUploaderThreads(ConsumerQueue<UploadJob> jobQ) {
-		executorThreads = new Thread[uploaderThreadCount];
-		executor = new JobExecutor[uploaderThreadCount];
+	private void startUploaderThreads(ConsumerQueue<Job> jobQ) {
+		executorThreads = new Thread[threadCount];
+		executor = new JobExecutor[threadCount];
 		for(int i = 0; i < executorThreads.length; i++) {
 			executor[i] = new JobExecutor(jobQ, client, overwrite);
 			executorThreads[i] = new Thread(executor[i]);
@@ -115,20 +122,20 @@ public class FileUploader {
 		return t;
 	}
 	
-	private UploadResult download(DirectoryEntry source, String destination) throws IOException, InterruptedException {
+	private Stats download(DirectoryEntry source, String destination) throws IOException, InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
 		Thread statusThread = waitForCompletion(generateJob);
-		UploadResult R = joinUploaderThreads();
+		Stats R = joinUploaderThreads();
 		statusThread.interrupt();
 		return R;
 	}
 	
-	private UploadResult upload(File source, String destination) throws IOException, InterruptedException {
+	private Stats upload(File source, String destination) throws IOException, InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
 		Thread statusThread = waitForCompletion(generateJob);
-		UploadResult R = joinUploaderThreads();
+		Stats R = joinUploaderThreads();
 		statusThread.interrupt();
 		return R;
 	}
@@ -142,8 +149,8 @@ public class FileUploader {
 		return status;
 	}
 	
-	private UploadResult joinUploaderThreads() throws InterruptedException {
-		UploadResult result = new UploadResult();
+	private Stats joinUploaderThreads() throws InterruptedException {
+		Stats result = new Stats();
 		for(int i = 0; i < executorThreads.length; i++) {
 			executorThreads[i].join();
 			result.update(executor[i].stats);
@@ -166,12 +173,12 @@ public class FileUploader {
 	}
 	
 	class StatusBar implements Runnable {
-		private long totalBytesToUpload;
-		private JobExecutor[] uploaders;
+		private long totalBytesToTransfer;
+		private JobExecutor[] executors;
 		private static final long sleepTime = 500;
-		StatusBar(long bytesToUpload, JobExecutor[] uploaders) {
-			totalBytesToUpload = bytesToUpload;
-			this.uploaders = uploaders;
+		StatusBar(long bytesToTransfer, JobExecutor[] uploaders) {
+			totalBytesToTransfer = bytesToTransfer;
+			this.executors = uploaders;
 		}
 		public void run() {
 			int percent = 0;
@@ -181,11 +188,11 @@ public class FileUploader {
 				} catch (InterruptedException e) {
 					break;
 				}
-				long bytesUploaded = 0;
-				for(int i = 0; i < uploaders.length; i++) {
-					bytesUploaded += executor[i].stats.getBytesTransferred();
+				long bytesTransferred = 0;
+				for(int i = 0; i < executors.length; i++) {
+					bytesTransferred += executor[i].stats.getBytesTransferred();
 				}
-				percent = (int) ((100.0*bytesUploaded)/totalBytesToUpload);
+				percent = (int) ((100.0*bytesTransferred)/totalBytesToTransfer);
 				System.out.printf("%% Complete: %d\r", percent);
 			}
 		}

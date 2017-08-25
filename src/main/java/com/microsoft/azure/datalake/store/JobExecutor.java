@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
 import com.microsoft.azure.datalake.store.DirectoryEntry;
 import com.microsoft.azure.datalake.store.IfExists;
-import com.microsoft.azure.datalake.store.UploadJob.JobType;
+import com.microsoft.azure.datalake.store.Job.JobType;
 import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 
 class JobExecutor implements Runnable {
@@ -36,7 +36,7 @@ class JobExecutor implements Runnable {
 	final char fileSeparator = '/';
 	final int fourMB = 4 * 1024 * 1024;
 	final int bufSize = fourMB;
-	ConsumerQueue<UploadJob> jobQ;
+	ConsumerQueue<Job> jobQ;
 	ADLStoreClient client;
 	Stats stats;
 	IfExists overwrite;
@@ -75,7 +75,7 @@ class JobExecutor implements Runnable {
 			return totalBytesTransmitted.get();
 		}
 		
-		public void addUploadedItem(UploadJob job, UploadStatus status) {
+		public void addUploadedItem(Job job, UploadStatus status) {
 			if(status == UploadStatus.successful) {
 				successfulTransfers.add(job.getSourcePath());
 			} else if(status == UploadStatus.failed){
@@ -96,7 +96,7 @@ class JobExecutor implements Runnable {
 		}
 	}
 	
-	JobExecutor(ConsumerQueue<UploadJob> jobQ, ADLStoreClient client, IfExists overwrite) {
+	JobExecutor(ConsumerQueue<Job> jobQ, ADLStoreClient client, IfExists overwrite) {
 		this.jobQ = jobQ;
 		this.client = client;
 		this.overwrite = overwrite;
@@ -104,7 +104,7 @@ class JobExecutor implements Runnable {
 	}
 	
 	public void run() {
-		UploadJob job;
+		Job job;
 		stats.begin();
 		while((job = jobQ.poll()) != null) {
 			if(job.type == JobType.MKDIR) {
@@ -112,7 +112,6 @@ class JobExecutor implements Runnable {
 			} else if(job.type == JobType.FILEUPLOAD){
 				uploadFile(job);
 			} else if(job.type == JobType.FILEDOWNLOAD) {
-				log.debug("Started downloading " + job.getSourcePath());
 				downloadFile(job);
 			}
 		}
@@ -120,7 +119,7 @@ class JobExecutor implements Runnable {
 		log.debug("Done uploading file");
 	}
 	
-	void downloadFile(UploadJob job) {
+	void downloadFile(Job job) {
 		UploadStatus status = downloadFileInternal(job);
 		job.updateStatus(status);
 		stats.updateChunkStats(status, job.size);
@@ -142,7 +141,7 @@ class JobExecutor implements Runnable {
 		}
 	}
 	
-	boolean renameLocalFile(UploadJob job) {
+	boolean renameLocalFile(Job job) {
 		Path source = Paths.get(job.data.destinationIntermediatePath);
 		Path destination = Paths.get(job.data.destinationFinalPath);
 		try {
@@ -154,7 +153,7 @@ class JobExecutor implements Runnable {
 		return false;
 	}
 	
-	UploadStatus downloadFileInternal(UploadJob job) {
+	UploadStatus downloadFileInternal(Job job) {
 		if(skipDownload(job)) {
 			return UploadStatus.skipped;
 		}
@@ -179,7 +178,7 @@ class JobExecutor implements Runnable {
 	}
 	
 	
-	void uploadFile(UploadJob job){
+	void uploadFile(Job job){
 		UploadStatus status = uploadFileInternal(job);
 		job.updateStatus(status);
 		stats.updateChunkStats(status, job.size);
@@ -205,7 +204,7 @@ class JobExecutor implements Runnable {
 		}
 	}
 	
-	boolean skipUpload(UploadJob job) {
+	boolean skipUpload(Job job) {
 		if(overwrite == IfExists.OVERWRITE) {
 			// overwrite option is provided by the user. Proceed to upload the file.
 			return false;
@@ -215,7 +214,7 @@ class JobExecutor implements Runnable {
 		}
 	}
 	
-	boolean skipDownload(UploadJob job) {
+	boolean skipDownload(Job job) {
 		if(overwrite == IfExists.OVERWRITE) {
 			// overwrite option is provided by the user. Proceed to download the file.
 			return false;
@@ -225,7 +224,7 @@ class JobExecutor implements Runnable {
 		}
 	}
 	
-	private UploadStatus uploadFileInternal(UploadJob job) {
+	private UploadStatus uploadFileInternal(Job job) {
 		if(skipUpload(job)) {
 			return UploadStatus.skipped;
 		}
@@ -254,7 +253,7 @@ class JobExecutor implements Runnable {
 	}
 	
 	
-	boolean concatenate(UploadJob job) {
+	boolean concatenate(Job job) {
 		if(!job.data.isSplitUpload()) return true;
 		boolean status = false;
 		String finalDestination = job.getDestinationFinalPath();
@@ -285,7 +284,7 @@ class JobExecutor implements Runnable {
 	 * trivial size check for now.
 	 * clean up?
 	 */
-	boolean verifyUpload(UploadJob job) throws IOException {
+	boolean verifyUpload(Job job) throws IOException {
 		String filePath = job.getDestinationFinalPath();
 		DirectoryEntry entry = client.getDirectoryEntry(filePath);
 		if(entry.length != job.data.sourceFile.length()) {
@@ -296,11 +295,11 @@ class JobExecutor implements Runnable {
 		return true;
 	}
 	
-	boolean verifyDownload(UploadJob job) {
+	boolean verifyDownload(Job job) {
 		return job.data.destinationFile.length() == job.data.sourceEntry.length;
 	}
 	
-	void mkDir(UploadJob job) {
+	void mkDir(Job job) {
 		String filePath = job.getDestinationFinalPath();
 		UploadStatus status = UploadStatus.failed;
 		try {
