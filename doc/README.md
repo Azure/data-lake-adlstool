@@ -183,7 +183,7 @@ adlstool upload newcred.cred /local/ /home
 This copies the entire directory and its subdirectories into ADLS under /home/ directory.
 
 When a large file is being uploaded, the tool will write data into multiple chunks on ADLS. These chunks are temparory and are placed at
-{dirname}/{filename}-segments-uuid/{filename}-id
+{dirname}/{filename}-segments-uuid/{filename}-id. If upload fails for any reason, these folders has to be removed by the user.
 
 ## Best Practices & FAQ
 
