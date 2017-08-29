@@ -25,7 +25,7 @@ To use this tool, it is best to have the following information and setup. If you
 
 ## Installing the tool 
 
-The ACL tool is available for both Windows and Linux, you can download the tool from [here](http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
+The ADLS tool is available for both Windows and Linux, you can download the tool from [here](http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
 
 ## Command line options
 
@@ -58,7 +58,9 @@ The step by step guide below, walkthrough how to use this tool in detail and how
 
 ## Step by Step guide  
 
-In our Sample walkthrough, we have an Azure Data Lake Store account with over a million files and folders under the directory "rectest". Our goal of this exercise is to modify ACLs on each of these files and folders by adding read and execute permissions for a user. 
+In our Sample walkthrough
+	a. we have an Azure Data Lake Store account with over a million files and folders under the directory "rectest". Our goal of this exercise is to modify ACLs on each of these files and folders by adding read and execute permissions for a user. 
+	b. Upload data.txt file on local machine to ADLS.
 
 ![Figure1](/media/Fig1.PNG)
 
