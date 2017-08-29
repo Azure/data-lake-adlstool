@@ -182,6 +182,9 @@ adlstool upload newcred.cred /local/ /home
 ```
 This copies the entire directory and its subdirectories into ADLS under /home/ directory.
 
+When a large file is being uploaded, the tool will write data into multiple chunks on ADLS. These chunks are temparory and are placed at
+{dirname}/{filename}-segments-uuid/{filename}-id
+
 ## Best Practices & FAQ
 
 **Performance** For best performance, we recommend runningitg this tool in an Azure VM that is in the same region your Azure Data Lake Store Account. This tool creates multiple threads on the client and then executes commands on each of those threads to set ACLs on every file. This latency of access to the Azure Data Lake Store account will determine the performance (in the time domain) of the tool. 
