@@ -59,7 +59,9 @@ The step by step guide below, walkthrough how to use this tool in detail and how
 ## Step by Step guide  
 
 In our Sample walkthrough
-	a. we have an Azure Data Lake Store account with over a million files and folders under the directory "rectest". Our goal of this exercise is to modify ACLs on each of these files and folders by adding read and execute permissions for a user. 
+
+	a. we have an Azure Data Lake Store account with over a million files and folders under the directory "rectest". Our goal of this exercise is to modify ACLs on each of these files and folders by adding read and execute permissions for a user.
+
 	b. Upload data.txt file on local machine to ADLS.
 
 ![Figure1](/media/Fig1.PNG)
