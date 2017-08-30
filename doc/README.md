@@ -84,7 +84,7 @@ In order to run the tool, you need some information to get started including ser
 
 #### Service Principal 
 
-We will use a Service Principal to to allow the tool to access the Azure Data Lake Store account, this service principal needs to be an owner for the ADLS account in order to perform the operation of applying ACLs. If you already have a service principal - note down the "ApplicationID" and the "Password" for the service principal. 
+We will use a Service Principal to to allow the tool to access the Azure Data Lake Store account, this service principal needs to be an owner for the ADLS account in order to perform the operation of applying ACLs or upload data. If you already have a service principal - note down the "ApplicationID" and the "Password" for the service principal. 
 
 To create a Service Principal from the Azure CLI 2.0, ensure that you have the CLI 2.0 installed on your machine. From a terminal/shell/command prompt run 
 
