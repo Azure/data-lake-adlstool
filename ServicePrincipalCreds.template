@@ -1,0 +1,7 @@
+#NOTE: Consul Template file. Creates Service Principal based cred file.
+#See https://github.com/hashicorp/consul-template for further information.
+account={{ env "ADLS_FQDN" }}
+credtype=clientcredentials
+clientid={{ env "SP_CLIENT_ID" }}
+credential={{ env "SP_CLIENT_SECRET" }}
+authurl={{ env "SP_OAUTH_URL" }}
