@@ -35,9 +35,6 @@ Usage:
   adlstool <modifyacl|removeacl> <credfile> <path> "<aclspec>"
   adlstool upload <credfile> <sourcePath> <destinationPath> [overwrite]
 
-For upload:
-  overwrite= Optional paramter. Specify overwrite, if destination files with same names should be overwritten
-
 Where <credfile> is the path to a java property file that contains the following properties:
   account= fully qualified domain name of the Azure Data Lake Store account
   credtype= the type of credential; one of clientcredentials or refreshtoken
@@ -50,6 +47,12 @@ For clientcredentials, provide these three values:
 For refreshtoken, provide these two values:
   clientid= the ID of the user
   refreshtoken= the refresh token
+
+For upload:
+  sourcePath= Absolute path of the file/folder to be uploaded into ADLS.
+  destinationPath= Path on ADLS, where the source file/folder has to be copied. The destinationPath has to be a directory under which the source file/folder is copied.
+  overwrite= Optional paramter. Specify overwrite, if destination files with the same names should be overwritten
+
 ```
 
 The step by step guide below, walkthrough how to use this tool in detail and how to obtain the right set of inputs used by the tool. 
