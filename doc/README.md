@@ -1,6 +1,10 @@
-# Apply ACLs recursively 
+# Apply ACLs recursively, Upload files/folders from local machine to ADLS 
 
-This utility allows users to recursively apply ACLs to their folders & files in [Azure Data Lake Store](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-overview). The tool is purpose built to solve the specific problem of applying recursive ACLs and in the future we plan to integrate this into our SDKs and CLI tools.
+This utility allows users to:
+
+	a. recursively apply ACLs to their folders & files in [Azure Data Lake Store](https://docs.microsoft.com/en-us/azure/data-lake-store/data-lake-store-overview). The tool is purpose built to solve the specific problem of applying recursive ACLs and in the future we plan to integrate this into our SDKs and CLI tools.
+
+	b. Upload files/folders from local machine to ADLS. The tool employs multiple threads to upload data thus providing high throughput. 
 
 You can download the latest version of this tool from [here](http://aka.ms/adlstool-download) 
 
@@ -21,7 +25,7 @@ To use this tool, it is best to have the following information and setup. If you
 
 ## Installing the tool 
 
-The ACL tool is available for both Windows and Linux, you can download the tool from [here](http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
+The ADLS tool is available for both Windows and Linux, you can download the tool from [here](http://aka.ms/adlstool-download). Once donwloaded, unzip the contents of the file. They contents contain that Java JAR file used by the tool and helper scripts for both Window and Linux. We recommand that you use this tool from a VM located in the same region as your ADLS account for best performance. 
 
 ## Command line options
 
@@ -29,7 +33,7 @@ The ACL tool is available for both Windows and Linux, you can download the tool 
 ADLS Java command-line tool
 Usage:
   adlstool <modifyacl|removeacl> <credfile> <path> "<aclspec>"
-
+  adlstool upload <credfile> <sourcePath> <destinationPath> [overwrite]
 
 Where <credfile> is the path to a java property file that contains the following properties:
   account= fully qualified domain name of the Azure Data Lake Store account
@@ -43,6 +47,12 @@ For clientcredentials, provide these three values:
 For refreshtoken, provide these two values:
   clientid= the ID of the user
   refreshtoken= the refresh token
+
+For upload:
+  sourcePath= Absolute path of the file/folder to be uploaded into ADLS.
+  destinationPath= Path on ADLS, where the source file/folder has to be copied. The destinationPath has to be a directory under which the source file/folder is copied.
+  overwrite= Optional paramter. Specify overwrite, if destination files with the same names should be overwritten
+
 ```
 
 The step by step guide below, walkthrough how to use this tool in detail and how to obtain the right set of inputs used by the tool. 
@@ -51,7 +61,11 @@ The step by step guide below, walkthrough how to use this tool in detail and how
 
 ## Step by Step guide  
 
-In our Sample walkthrough, we have an Azure Data Lake Store account with over a million files and folders under the directory "rectest". Our goal of this exercise is to modify ACLs on each of these files and folders by adding read and execute permissions for a user. 
+In our Sample walkthrough
+
+1. we have an Azure Data Lake Store account with over a million files and folders under the directory "rectest". Our goal of this exercise is to modify ACLs on each of these files and folders by adding read and execute permissions for a user.
+
+2. Upload data.txt file on local machine to ADLS.
 
 ![Figure1](/media/Fig1.PNG)
 
@@ -73,7 +87,7 @@ In order to run the tool, you need some information to get started including ser
 
 #### Service Principal 
 
-We will use a Service Principal to to allow the tool to access the Azure Data Lake Store account, this service principal needs to be an owner for the ADLS account in order to perform the operation of applying ACLs. If you already have a service principal - note down the "ApplicationID" and the "Password" for the service principal. 
+We will use a Service Principal to to allow the tool to access the Azure Data Lake Store account, this service principal needs to be an owner for the ADLS account in order to perform the operation of applying ACLs or upload data. If you already have a service principal - note down the "ApplicationID" and the "Password" for the service principal. 
 
 To create a Service Principal from the Azure CLI 2.0, ensure that you have the CLI 2.0 installed on your machine. From a terminal/shell/command prompt run 
 
@@ -163,6 +177,20 @@ adlstool modifyacl newcred.cred "\rectest2" user:c1cdf024-1a48-41a9-ad14-c1f262b
 ```
 
 Once the tool successfully completes, you ACLs have been applied, we expected <10 mins to apply ACLs to ~ 1 million objects. You can use the Azure Portal to verify that the ACLs have been set by check a sample of file and folders in your path. 
+
+
+```
+adlstool upload newcred.cred /local/data.txt /home 
+```
+This copies data.txt file in the local machine to ADLS under /home directory.
+
+```
+adlstool upload newcred.cred /local/ /home 
+```
+This copies the entire directory and its subdirectories into ADLS under /home/ directory.
+
+When a large file is being uploaded, the tool will write data into multiple chunks on ADLS. These chunks are temparory and are placed at
+{dirname}/{filename}-segments-uuid/{filename}-id. If upload fails for any reason, these folders has to be removed by the user.
 
 ## Best Practices & FAQ
 
