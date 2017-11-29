@@ -1,11 +1,10 @@
 package com.microsoft.azure.datalake.store;
 
-public class UploaderMain {
-	static final int numberOfArguments = 4;
-	
-	
-    public static void main(RequestedOperation op, ADLStoreClient client, String[] args ) {
-        if (args.length < numberOfArguments) {
+public class DownloaderMain {
+
+	public static void main(RequestedOperation op, ADLStoreClient client, String[] args ) {
+        int numberOfArguments = 4;
+		if (args.length < numberOfArguments ) {
             System.out.println("Illegal number of command-line parameters: " + args.length);
             AdlsTool.usage(1000);
         }
@@ -30,19 +29,19 @@ public class UploaderMain {
         IfExists overwriteOption = overwrite != null ? IfExists.OVERWRITE : IfExists.FAIL; 
         try {
             long start = System.currentTimeMillis();
-            Stats R = RemoteCopy.upload(srcPath, dstPath, client, overwriteOption);
+            Stats R = RemoteCopy.download(srcPath, dstPath, client, overwriteOption);
             long stop = System.currentTimeMillis();
 
             if(R.getSkippedTransfers().size() + R.getFailedTransfers().size() == 0) {
             	System.out.println("SUCCESSFULLY COMPLETE");
             } else {
-            	System.out.println("UPLOAD FAILED FOR FEW FILES");
+            	System.out.println("DOWNLOAD FAILED FOR FEW FILES");
             }
             System.out.println("Time taken: " + AdlsTool.timeString(stop - start));
-            System.out.println("# of Files Uploaded: " + R.getSuccessfulTransfers().size());
-            System.out.println("Total number of Bytes uploaded: " + R.totalSizeInBytes);
+            System.out.println("# of Files Downloaded: " + R.getSuccessfulTransfers().size());
+            System.out.println("Total number of Bytes downloaded: " + R.totalSizeInBytes);
             if(R.getSkippedTransfers().size() + R.getFailedTransfers().size() > 0) {
-            	System.out.println("Failed uploads:");
+            	System.out.println("Failed downloads:");
                 for(String file: R.getFailedTransfers()) {
                 	System.out.println('\t' + file);
                 }
@@ -52,10 +51,11 @@ public class UploaderMain {
                 }
             }
         } catch (Exception ex) {
-            System.out.println("Error uploading files");
+            System.out.println("Error downloading files");
             System.out.println(ex.getMessage());
             ex.printStackTrace();
             System.exit(5001);
         }
     }
+
 }

@@ -10,4 +10,4 @@ package com.microsoft.azure.datalake.store;
 /**
  * Specifies the ACL operation to apply
  */
-public enum RequestedOperation {modifyacl, setacl, removeacl, upload}
+public enum RequestedOperation {modifyacl, setacl, removeacl, upload, download}

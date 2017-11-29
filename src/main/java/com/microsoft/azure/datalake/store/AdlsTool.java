@@ -71,6 +71,9 @@ class AdlsTool {
             case upload:
                 UploaderMain.main(op, client, args);
                 break;
+            case download:
+            	DownloaderMain.main(op, client, args);
+            	break;
             default:
                 System.out.println("Illegal operation specified (setacl)");
                 AdlsTool.usage(1011);
@@ -128,14 +131,14 @@ class AdlsTool {
     /*
      * User can specify chunksize in MB.
      */
-    public static int getChunkSize(int defaultChunkSize) {
+    public static long getChunkSize(long defaultChunkSize) {
     	Properties p = System.getProperties();
     	String chunkSize = p.getProperty("adlstool.chunksize");
-    	int size = defaultChunkSize;
+    	long size = defaultChunkSize;
     	if(chunkSize != null) {
     		try {
     			size = Integer.parseUnsignedInt(chunkSize);
-    			size = Math.min(defaultChunkSize, size*oneMB);
+    			size = size*oneMB;
     		} catch (NumberFormatException ex) {
     			System.out.println("Illegal chunksize in system property adlstool.chunksize: " + chunkSize);
     			System.exit(1008);

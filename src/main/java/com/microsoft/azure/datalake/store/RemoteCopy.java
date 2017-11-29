@@ -3,6 +3,7 @@ package com.microsoft.azure.datalake.store;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.PriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,21 +13,21 @@ import com.microsoft.azure.datalake.store.DirectoryEntry;
 import com.microsoft.azure.datalake.store.DirectoryEntryType;
 
 
-public class FileUploader {
-	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
-	private static int uploaderThreadCount;
+public class RemoteCopy {
+	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.RemoteCopy");
+	private static int threadCount;
 	private ProcessingQueue<MetaData> metaDataQ;
-	private ConsumerQueue<UploadJob> jobQ;
+	private ConsumerQueue<Job> jobQ;
 	private ADLStoreClient client;
 	private Thread[] executorThreads;
 	private JobExecutor[] executor;
 	private IfExists overwrite;
 	private EnumerateFile jobGen;
 	
-	public FileUploader(ADLStoreClient client, IfExists overwriteOption) {
+	public RemoteCopy(ADLStoreClient client, IfExists overwriteOption) {
 		metaDataQ = new ProcessingQueue<MetaData>();
-		jobQ = new ConsumerQueue<UploadJob>(new PriorityQueue<UploadJob>());
-		uploaderThreadCount = AdlsTool.threadSetup();
+		jobQ = new ConsumerQueue<Job>(new PriorityQueue<Job>());
+		threadCount = AdlsTool.threadSetup();
 		this.client = client;
 		this.overwrite = overwriteOption;
 	}
@@ -37,12 +38,34 @@ public class FileUploader {
 	 * @param destination Destination directory to copy the files to.
 	 * @param client ADLStoreClient to use to upload the file.
 	 */
-	public static UploadResult upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
-		FileUploader F = new FileUploader(client, overwriteOption);
+	public static Stats upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
+		RemoteCopy F = new RemoteCopy(client, overwriteOption);
 		return F.uploadInternal(source, destination);
 	}
 	
-	private UploadResult uploadInternal(String source, String destination) throws InterruptedException, IOException {
+	public static Stats download(String source, String destination, ADLStoreClient client, IfExists overwriteOption) {
+		RemoteCopy F = new RemoteCopy(client, overwriteOption);
+		DirectoryEntry entry = null;
+		Stats R = new Stats();
+		
+		try {
+			entry = client.getDirectoryEntry(source);
+		} catch (IOException e) {
+			log.error("Error collecting details of source from ADLS");
+			log.error(e.getMessage());
+			System.out.println("Unable to collect details of source: " + source + " from ADLS");
+			R.failedTransfers.add(source);
+			return R;
+		}
+		try {
+			R = F.download(entry, destination);
+		} catch (IOException | InterruptedException e) {
+			log.error(e.getMessage());
+		}
+		return R;
+	}
+	
+	private Stats uploadInternal(String source, String destination) throws InterruptedException, IOException {
 		if(source == null) {
 			throw new IllegalArgumentException("source is null");
 		} else if(destination == null) {
@@ -64,7 +87,7 @@ public class FileUploader {
 		
 		if(!isDirectory(srcDir)) {
 			if(!verifyDestination(destination)) {
-				return new UploadResult();
+				return new Stats();
 			}
 		}
 		
@@ -75,9 +98,9 @@ public class FileUploader {
 		return inFile.listFiles() != null;
 	}
 	
-	private void startUploaderThreads(ConsumerQueue<UploadJob> jobQ) {
-		executorThreads = new Thread[uploaderThreadCount];
-		executor = new JobExecutor[uploaderThreadCount];
+	private void startUploaderThreads(ConsumerQueue<Job> jobQ) {
+		executorThreads = new Thread[threadCount];
+		executor = new JobExecutor[threadCount];
 		for(int i = 0; i < executorThreads.length; i++) {
 			executor[i] = new JobExecutor(jobQ, client, overwrite);
 			executorThreads[i] = new Thread(executor[i]);
@@ -92,11 +115,27 @@ public class FileUploader {
 		return t;
 	}
 	
-	private UploadResult upload(File source, String destination) throws IOException, InterruptedException {
+	private Thread startEnumeration(DirectoryEntry source, String destination) {
+		jobGen = new EnumerateFile(source, destination, metaDataQ, jobQ, client);
+		Thread t = new Thread(jobGen);
+		t.start();
+		return t;
+	}
+	
+	private Stats download(DirectoryEntry source, String destination) throws IOException, InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
 		Thread statusThread = waitForCompletion(generateJob);
-		UploadResult R = joinUploaderThreads();
+		Stats R = joinUploaderThreads();
+		statusThread.interrupt();
+		return R;
+	}
+	
+	private Stats upload(File source, String destination) throws IOException, InterruptedException {
+		Thread generateJob = startEnumeration(source, destination);
+		startUploaderThreads(jobQ);
+		Thread statusThread = waitForCompletion(generateJob);
+		Stats R = joinUploaderThreads();
 		statusThread.interrupt();
 		return R;
 	}
@@ -104,14 +143,14 @@ public class FileUploader {
 	private Thread waitForCompletion(Thread generateJob) throws InterruptedException {
 		generateJob.join();
 		jobQ.markComplete(); // Consumer threads wait until enumeration is active.
-		StatusBar statusBar = new StatusBar(jobGen.getBytesToUpload(), executor);
+		StatusBar statusBar = new StatusBar(jobGen.getBytesToTransmit(), executor);
 		Thread status = new Thread(statusBar);  // start a status bar.
 		status.start();
 		return status;
 	}
 	
-	private UploadResult joinUploaderThreads() throws InterruptedException {
-		UploadResult result = new UploadResult();
+	private Stats joinUploaderThreads() throws InterruptedException {
+		Stats result = new Stats();
 		for(int i = 0; i < executorThreads.length; i++) {
 			executorThreads[i].join();
 			result.update(executor[i].stats);
@@ -134,12 +173,12 @@ public class FileUploader {
 	}
 	
 	class StatusBar implements Runnable {
-		private long totalBytesToUpload;
-		private JobExecutor[] uploaders;
+		private long totalBytesToTransfer;
+		private JobExecutor[] executors;
 		private static final long sleepTime = 500;
-		StatusBar(long bytesToUpload, JobExecutor[] uploaders) {
-			totalBytesToUpload = bytesToUpload;
-			this.uploaders = uploaders;
+		StatusBar(long bytesToTransfer, JobExecutor[] uploaders) {
+			totalBytesToTransfer = bytesToTransfer;
+			this.executors = uploaders;
 		}
 		public void run() {
 			int percent = 0;
@@ -149,12 +188,12 @@ public class FileUploader {
 				} catch (InterruptedException e) {
 					break;
 				}
-				long bytesUploaded = 0;
-				for(int i = 0; i < uploaders.length; i++) {
-					bytesUploaded += executor[i].stats.getBytesUploaded();
+				long bytesTransferred = 0;
+				for(int i = 0; i < executors.length; i++) {
+					bytesTransferred += executor[i].stats.getBytesTransferred();
 				}
-				percent = (int) ((100.0*bytesUploaded)/totalBytesToUpload);
-				System.out.printf("%% Uploaded: %d\r", percent);
+				percent = (int) ((100.0*bytesTransferred)/totalBytesToTransfer);
+				System.out.printf("%% Complete: %d\r", percent);
 			}
 		}
 		
