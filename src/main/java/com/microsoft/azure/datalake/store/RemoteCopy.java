@@ -42,7 +42,7 @@ public class RemoteCopy {
 	public static Stats download(String source, String destination, ADLStoreClient client, IfExists overwriteOption) {
 		RemoteCopy F = new RemoteCopy(client, overwriteOption);
 		DirectoryEntry entry = null;
-		Stats R = new Stats();
+		Stats stats = new Stats();
 		
 		try {
 			entry = client.getDirectoryEntry(source);
@@ -50,15 +50,15 @@ public class RemoteCopy {
 			log.error("Error collecting details of source from ADLS");
 			log.error(e.getMessage());
 			System.out.println("Unable to collect details of source: " + source + " from ADLS");
-			R.failedTransfers.add(source);
-			return R;
+			stats.failedTransfers.add(source);
+			return stats;
 		}
 		try {
-			R = F.download(entry, destination);
+			stats = F.download(entry, destination);
 		} catch (IOException | InterruptedException e) {
 			log.error(e.getMessage());
 		}
-		return R;
+		return stats;
 	}
 	
 	private Stats uploadInternal(String source, String destination) throws InterruptedException, IOException {
@@ -154,14 +154,14 @@ public class RemoteCopy {
 		return result;
 	}
 
-	private boolean verifyDestination(String dst) throws InterruptedException {
-		DirectoryEntry D = null;
+	private boolean verifyDestination(String dst) {
+		DirectoryEntry de = null;
 		try {
-			D = client.getDirectoryEntry(dst);
+			de = client.getDirectoryEntry(dst);
 		} catch (IOException e) {
 			log.debug("Destination directory doesn't exists, will be created");
 		}
-		if(D != null && D.type != DirectoryEntryType.DIRECTORY) {
+		if(de != null && de.type != DirectoryEntryType.DIRECTORY) {
 			log.error("Destination path points to a file");
 			throw new IllegalArgumentException("Destination path points to a file. Please provide a directory");
 		}

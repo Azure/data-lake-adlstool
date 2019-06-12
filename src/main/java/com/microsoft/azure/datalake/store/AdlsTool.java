@@ -110,7 +110,6 @@ class AdlsTool {
     }
 
     private static Properties readPropertiesFile(String filename) throws IOException {
-        File f = new File(filename);
         FileInputStream instr = new FileInputStream(filename);
         Properties prop = new Properties();
         prop.load(instr);

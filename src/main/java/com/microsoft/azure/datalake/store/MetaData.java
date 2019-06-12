@@ -97,7 +97,7 @@ class MetaData {
 	}
 	
 	public List<String> getChunkFiles() {
-		List<String> list = new ArrayList<String>();
+		List<String> list = new ArrayList<>();
 		String destination = getDestinationIntermediatePath();
 		for(long jobid = 0; jobid < splits; jobid++) {
 			list.add(destination + jobid);

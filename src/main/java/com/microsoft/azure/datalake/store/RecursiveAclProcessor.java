@@ -126,10 +126,7 @@ public class RecursiveAclProcessor {
     }
 
 
-
-
     private class ThreadProcessor  implements Runnable {
-
         public void run() {
             try {
                 Payload payload;
@@ -199,7 +196,7 @@ public class RecursiveAclProcessor {
     private void processDirectory(DirectoryEntry de, String continuationToken) {
         queue.add(new Payload(PayloadType.PROCESS_DIRECTORY, de, continuationToken));        // queue the task to recurse this directory
         enqueueAclChange(de);
-        if (continuationToken == null || continuationToken.isEmpty()) // Means the first time called on this directory
+        if (continuationToken == null || continuationToken.isEmpty()) // True only the first time called on this directory
             directoryCount.incrementAndGet();
     }
 

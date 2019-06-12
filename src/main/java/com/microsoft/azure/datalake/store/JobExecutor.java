@@ -13,13 +13,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 class JobExecutor implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
-	final char fileSeparator = '/';
 	final int fourMB = 4 * 1024 * 1024;
 	final int bufSize = fourMB;
 	ConsumerQueue<Job> jobQ;
@@ -27,7 +26,7 @@ class JobExecutor implements Runnable {
 	Stats stats;
 	IfExists overwrite;
 	
-	static enum UploadStatus {
+	enum UploadStatus {
 		successful,
 		failed,
 		skipped
@@ -38,9 +37,9 @@ class JobExecutor implements Runnable {
 		int numberOfFailedUploads;
 		long totalTimeTakenInMilliSeconds = 0;
 		AtomicLong totalBytesTransmitted = new AtomicLong(0);
-		List<String> successfulTransfers = new LinkedList<String>();
-		List<String> failedTransfers = new LinkedList<>();
-		List<String> skippedTransfers = new LinkedList<>();
+		List<String> successfulTransfers = new ArrayList<>();
+		List<String> failedTransfers =new ArrayList<>();
+		List<String> skippedTransfers = new ArrayList<>();
 		
 		public void begin() {
 			totalTimeTakenInMilliSeconds = System.currentTimeMillis();
@@ -149,7 +148,7 @@ class JobExecutor implements Runnable {
 				RandomAccessFile fileStream = new RandomAccessFile(file, "rw")) {
 			stream.seek(job.offset);
 			fileStream.seek(job.offset);
-			byte[] data = new byte[4*1024*1024];
+			byte[] data = new byte[bufSize];
 			long totalBytesRead = 0, bytesRead;
 			while(totalBytesRead < job.size && (bytesRead = stream.read(data)) != -1) {
 				int write = (int) Math.min(bytesRead, job.size - totalBytesRead);

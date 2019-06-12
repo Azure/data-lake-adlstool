@@ -1,7 +1,6 @@
 package com.microsoft.azure.datalake.store;
 
 import java.util.ArrayDeque;
-import java.util.LinkedList;
 import java.util.Queue;
 
 class ProcessingQueue<T> {
