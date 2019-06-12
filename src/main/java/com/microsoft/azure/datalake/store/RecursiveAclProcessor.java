@@ -14,7 +14,6 @@ import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -56,7 +55,7 @@ public class RecursiveAclProcessor {
 
 
     private RequestedOperation op;
-    private final ProcessingQueue2<Payload> queue = new ProcessingQueue2<>();
+    private final ProcessingPriorityQueue<Payload> queue = new ProcessingPriorityQueue<>();
     private ADLStoreClient client;
     private AtomicInteger opCountForProgressBar = new AtomicInteger(0);
 

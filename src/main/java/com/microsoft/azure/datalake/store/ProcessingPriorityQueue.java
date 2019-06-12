@@ -7,6 +7,7 @@
 package com.microsoft.azure.datalake.store;
 
 
+import java.util.ArrayDeque;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
@@ -46,7 +47,7 @@ import java.util.Queue;
  *
  * @param <T> The type of items in the queue
  */
-class ProcessingQueue2<T> {
+class ProcessingPriorityQueue<T> {
     private Queue<T> internalQueue = new PriorityQueue<>();
     private int processorCount = 0;
 
