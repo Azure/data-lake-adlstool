@@ -7,7 +7,6 @@
 package com.microsoft.azure.datalake.store;
 
 
-import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 

@@ -8,14 +8,9 @@
 package com.microsoft.azure.datalake.store;
 
 import com.microsoft.azure.datalake.store.acl.AclEntry;
-import com.microsoft.azure.datalake.store.oauth2.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-import java.util.Properties;
 
 /**
  * Main method for the ACL operations

@@ -1,19 +1,14 @@
 package com.microsoft.azure.datalake.store;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
+import com.microsoft.azure.datalake.store.Job.JobType;
+import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
-import java.io.Writer;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,15 +16,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.microsoft.azure.datalake.store.ADLStoreClient;
-import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.IfExists;
-import com.microsoft.azure.datalake.store.Job.JobType;
-import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
 
 class JobExecutor implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");

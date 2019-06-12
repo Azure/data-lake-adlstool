@@ -1,16 +1,12 @@
 package com.microsoft.azure.datalake.store;
 
 
-import java.io.File;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.PriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.azure.datalake.store.ADLStoreClient;
-import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.DirectoryEntryType;
+import java.io.File;
+import java.io.IOException;
+import java.util.PriorityQueue;
 
 
 public class RemoteCopy {
