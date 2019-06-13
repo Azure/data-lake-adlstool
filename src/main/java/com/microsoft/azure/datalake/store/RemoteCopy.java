@@ -21,8 +21,8 @@ public class RemoteCopy {
 	private EnumerateFile jobGen;
 	
 	public RemoteCopy(ADLStoreClient client, IfExists overwriteOption) {
-		metaDataQ = new ProcessingQueue<MetaData>();
-		jobQ = new ConsumerQueue<Job>(new PriorityQueue<Job>());
+		metaDataQ = new ProcessingQueue<>();
+		jobQ = new ConsumerQueue<>(new PriorityQueue<Job>());
 		threadCount = AdlsTool.threadSetup();
 		this.client = client;
 		this.overwrite = overwriteOption;
@@ -34,7 +34,7 @@ public class RemoteCopy {
 	 * @param destination Destination directory to copy the files to.
 	 * @param client ADLStoreClient to use to upload the file.
 	 */
-	public static Stats upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
+	public static Stats upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws InterruptedException {
 		RemoteCopy F = new RemoteCopy(client, overwriteOption);
 		return F.uploadInternal(source, destination);
 	}
@@ -53,15 +53,16 @@ public class RemoteCopy {
 			stats.failedTransfers.add(source);
 			return stats;
 		}
+
 		try {
 			stats = F.download(entry, destination);
-		} catch (IOException | InterruptedException e) {
+		} catch (InterruptedException e) {
 			log.error(e.getMessage());
 		}
 		return stats;
 	}
 	
-	private Stats uploadInternal(String source, String destination) throws InterruptedException, IOException {
+	private Stats uploadInternal(String source, String destination) throws InterruptedException {
 		if(source == null) {
 			throw new IllegalArgumentException("source is null");
 		} else if(destination == null) {
@@ -118,7 +119,7 @@ public class RemoteCopy {
 		return t;
 	}
 	
-	private Stats download(DirectoryEntry source, String destination) throws IOException, InterruptedException {
+	private Stats download(DirectoryEntry source, String destination) throws InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
 		Thread statusThread = waitForCompletion(generateJob);
@@ -127,7 +128,7 @@ public class RemoteCopy {
 		return R;
 	}
 	
-	private Stats upload(File source, String destination) throws IOException, InterruptedException {
+	private Stats upload(File source, String destination) throws InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
 		Thread statusThread = waitForCompletion(generateJob);
