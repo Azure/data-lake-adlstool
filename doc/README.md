@@ -170,23 +170,19 @@ We will use this string in running the tool.
 
 ### Running the Tool
 
-We now all the information needed to run the tool. From a Terminal/Shell/Command Line on your computer, run 
+We now have all the information needed to run the tool. From a Terminal/Shell/Command Line on your computer, run 
 
 ```
 adlstool modifyacl newcred.cred "\rectest2" user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x
 ```
+Please make sure to use the group qualifier when you are adding an AAD group to the ACL and the user qualifier when you are adding a user identity (end user or Service Principal). In general , we recommend that you use groups in your ACLs as a best practice, for more information, please visit the [Best practices section](https://azure.github.io/data-lake-adlstool/doc/#best-practices--faq) of this document.
 
-#### Acl Spec string for applying multiple Acls
-
-We can specify multiple access acls and multiple default acls together in one run. For the above example we can also apply the default acls of r-x for user c1cdf024-1a48-41a9-ad14-c1f262b0cfec as shown below
+You can also specify multiple access ACLs and multiple default ACLs together in one run. For example, we can also apply the default ACLs of r-x for group c1cdf024-1a48-41a9-ad14-c1f262b0cfec as shown below
 
 ```
 adlstool modifyacl newcred.cred "\rectest2" "user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x,default:user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x"
 ```
-
 Once the tool successfully completes, you ACLs have been applied, we expected <10 mins to apply ACLs to ~ 1 million objects. You can use the Azure Portal to verify that the ACLs have been set by check a sample of file and folders in your path. 
-
-
 ```
 adlstool upload newcred.cred /local/data.txt /home 
 ```
