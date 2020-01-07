@@ -176,6 +176,14 @@ We now all the information needed to run the tool. From a Terminal/Shell/Command
 adlstool modifyacl newcred.cred "\rectest2" user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x
 ```
 
+#### Acl Spec string for applying multiple Acls
+
+We can specify multiple access acls and multiple default acls together in one run. For the above example we can also apply the default acls of r-x for user c1cdf024-1a48-41a9-ad14-c1f262b0cfec as shown below
+
+```
+adlstool modifyacl newcred.cred "\rectest2" "user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x,default:user:c1cdf024-1a48-41a9-ad14-c1f262b0cfec:r-x"
+```
+
 Once the tool successfully completes, you ACLs have been applied, we expected <10 mins to apply ACLs to ~ 1 million objects. You can use the Azure Portal to verify that the ACLs have been set by check a sample of file and folders in your path. 
 
 
