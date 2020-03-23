@@ -1,14 +1,14 @@
 package com.microsoft.azure.datalake.store;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Stats {
 	public long timeTakenInMilliSeconds = 0;
 	long totalSizeInBytes;
-	public List<String> successfulTransfers = new LinkedList<>();
-	public List<String> failedTransfers = new LinkedList<>();
-	public List<String> skippedTransfers = new LinkedList<>();
+	public List<String> successfulTransfers = new ArrayList<>();
+	public List<String> failedTransfers = new ArrayList<>();
+	public List<String> skippedTransfers = new ArrayList<>();
 	public void update(JobExecutor.Stats stats) {
 		totalSizeInBytes += stats.getBytesTransferred();
 		successfulTransfers.addAll(stats.getSuccessfulUploads());

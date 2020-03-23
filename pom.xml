@@ -93,6 +93,7 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.10.4</version>
         <configuration>
+          <source>8</source>
           <quiet>true</quiet>  <!-- only show warnings and errors during build -->
         </configuration>
         <executions>
@@ -170,7 +171,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-data-lake-store-sdk</artifactId>
-      <version>2.2.1</version>
+      <version>2.3.4</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>

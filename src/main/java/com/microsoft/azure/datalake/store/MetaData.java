@@ -1,20 +1,15 @@
 package com.microsoft.azure.datalake.store;
 
+import com.microsoft.azure.datalake.store.JobExecutor.UploadStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.swing.JPopupMenu.Separator;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.microsoft.azure.datalake.store.JobExecutor.UploadStatus;
 
 class MetaData {
 	private static final char adlsFileSeparator = '/';
@@ -102,7 +97,7 @@ class MetaData {
 	}
 	
 	public List<String> getChunkFiles() {
-		List<String> list = new ArrayList<String>();
+		List<String> list = new ArrayList<>();
 		String destination = getDestinationIntermediatePath();
 		for(long jobid = 0; jobid < splits; jobid++) {
 			list.add(destination + jobid);

@@ -13,9 +13,7 @@ import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,9 +34,17 @@ public class RecursiveAclProcessor {
     private class Payload implements Comparable<Payload> {
         public PayloadType type;
         public DirectoryEntry de;
+        public String continuation;
         public Payload(PayloadType type, DirectoryEntry de) {
             this.type = type;
             this.de = de;
+            this.continuation = "";
+        }
+
+        public Payload(PayloadType type, DirectoryEntry de, String continuation) {
+            this.type = type;
+            this.de = de;
+            this.continuation = continuation;
         }
 
         @Override
@@ -49,15 +55,14 @@ public class RecursiveAclProcessor {
 
 
     private RequestedOperation op;
-    private final ProcessingQueue2<Payload> queue = new ProcessingQueue2<>();
+    private final ProcessingPriorityQueue<Payload> queue = new ProcessingPriorityQueue<>();
     private ADLStoreClient client;
     private AtomicInteger opCountForProgressBar = new AtomicInteger(0);
 
     private static final int ENUMERATION_PAGESIZE = 16000;
 
-    private String path;
     private List<AclEntry> aclSpec;
-    private List<AclEntry> aclSpecForFiles = new LinkedList<>();
+    private List<AclEntry> aclSpecForFiles = new ArrayList<>(10);
 
     // for stats
     private AtomicLong fileCount = new AtomicLong(0);
@@ -84,10 +89,8 @@ public class RecursiveAclProcessor {
 
     private RecursiveAclProcessorStats processRequestInternal(ADLStoreClient client, String path, List<AclEntry> aclSpec, RequestedOperation op) throws IOException {
         this.client = client;
-        this.path = path;
         this.aclSpec = aclSpec;
         this.op = op;
-
         for (AclEntry e : aclSpec) {
             if (e.scope == AclScope.ACCESS) {
                 this.aclSpecForFiles.add(e);
@@ -98,7 +101,7 @@ public class RecursiveAclProcessor {
         if (de.type == DirectoryEntryType.FILE) {
             processFile(de);
         } else {
-            processDirectory(de);
+            processDirectory(de, "");
         }
 
         // Determine the number of threads to use
@@ -123,17 +126,14 @@ public class RecursiveAclProcessor {
     }
 
 
-
-
     private class ThreadProcessor  implements Runnable {
-
         public void run() {
             try {
                 Payload payload;
                 while ((payload = queue.poll()) != null) {
                     try {
                         if (payload.type == PayloadType.PROCESS_DIRECTORY) {
-                            processDirectoryTree(payload.de.fullName);
+                            processDirectoryTree(payload.de, payload.continuation);
                         } else if (payload.type == PayloadType.MODIFY_ACL_FOR_SINGLE_ENTRY) {
                             if (payload.de.type == DirectoryEntryType.FILE) {
                                 client.modifyAclEntries(payload.de.fullName, aclSpecForFiles);
@@ -171,31 +171,33 @@ public class RecursiveAclProcessor {
         }
     }
 
-    private void processDirectoryTree(String directoryName) throws IOException {
-        int pagesize = ENUMERATION_PAGESIZE;
-        ArrayList<DirectoryEntry> list;
-        boolean eol = false;
-        String startAfter = null;
+    private void processDirectoryTree(DirectoryEntry directoryEntry, String continuationToken) throws IOException {
+        List<DirectoryEntry> entries;
+        String directoryName = directoryEntry.fullName;
 
-        do {
-            list = (ArrayList<DirectoryEntry>) enumerateDirectoryInternal(directoryName, pagesize,
-                    startAfter, null, null);
-            if (list == null || list.size() == 0) break;
-            for (DirectoryEntry de : list) {
-                if (de.type == DirectoryEntryType.FILE) {
-                    processFile(de);
-                } else {
-                    processDirectory(de);
-                }
-                startAfter = de.name;
+        DirectoryEntryListWithContinuationToken dirEntContToken =  enumerateDirectoryInternal(directoryName, ENUMERATION_PAGESIZE,
+                continuationToken, null, null);
+        entries = dirEntContToken.getEntries();
+        if (entries == null || entries.isEmpty())
+            return ;
+        for (DirectoryEntry de : entries) {
+            if (de.type == DirectoryEntryType.FILE) {
+                processFile(de);
+            } else {
+                processDirectory(de, "");
             }
-        } while (list.size() >= pagesize);
+
+        }
+        continuationToken = dirEntContToken.getContinuationToken();
+        if(continuationToken != null && !continuationToken.isEmpty())
+            processDirectory(directoryEntry, continuationToken);
     }
 
-    private void processDirectory(DirectoryEntry de) {
-        queue.add(new Payload(PayloadType.PROCESS_DIRECTORY, de));        // queue the task to recurse this directory
+    private void processDirectory(DirectoryEntry de, String continuationToken) {
+        queue.add(new Payload(PayloadType.PROCESS_DIRECTORY, de, continuationToken));        // queue the task to recurse this directory
         enqueueAclChange(de);
-        directoryCount.incrementAndGet();
+        if (continuationToken == null || continuationToken.isEmpty()) // True only the first time called on this directory
+            directoryCount.incrementAndGet();
     }
 
     private void processFile(DirectoryEntry de) {
@@ -213,7 +215,7 @@ public class RecursiveAclProcessor {
         }
     }
 
-    private List<DirectoryEntry> enumerateDirectoryInternal(String path,
+    private DirectoryEntryListWithContinuationToken enumerateDirectoryInternal(String path,
                                                             int maxEntriesToRetrieve,
                                                             String startAfter,
                                                             String endBefore,
@@ -221,9 +223,9 @@ public class RecursiveAclProcessor {
             throws IOException {
         RequestOptions opts = new RequestOptions();
         opts.retryPolicy = new ExponentialBackoffPolicy();
+        opts.timeout = 2 * client.timeout;
         OperationResponse resp = new OperationResponse();
-        List<DirectoryEntry> dirEnt = Core.listStatus(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn,
-                client, opts, resp);
+        DirectoryEntryListWithContinuationToken dirEnt  = Core.listStatusWithToken(path, startAfter, endBefore, maxEntriesToRetrieve, oidOrUpn, client, opts, resp);
         if (!resp.successful) {
             throw client.getExceptionFromResponse(resp, "Error enumerating directory " + path);
         }

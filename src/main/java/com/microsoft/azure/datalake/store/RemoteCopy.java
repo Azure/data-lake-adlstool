@@ -1,16 +1,12 @@
 package com.microsoft.azure.datalake.store;
 
 
-import java.io.File;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.PriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.azure.datalake.store.ADLStoreClient;
-import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.DirectoryEntryType;
+import java.io.File;
+import java.io.IOException;
+import java.util.PriorityQueue;
 
 
 public class RemoteCopy {
@@ -25,8 +21,8 @@ public class RemoteCopy {
 	private EnumerateFile jobGen;
 	
 	public RemoteCopy(ADLStoreClient client, IfExists overwriteOption) {
-		metaDataQ = new ProcessingQueue<MetaData>();
-		jobQ = new ConsumerQueue<Job>(new PriorityQueue<Job>());
+		metaDataQ = new ProcessingQueue<>();
+		jobQ = new ConsumerQueue<>(new PriorityQueue<Job>());
 		threadCount = AdlsTool.threadSetup();
 		this.client = client;
 		this.overwrite = overwriteOption;
@@ -38,7 +34,7 @@ public class RemoteCopy {
 	 * @param destination Destination directory to copy the files to.
 	 * @param client ADLStoreClient to use to upload the file.
 	 */
-	public static Stats upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws IOException, InterruptedException {
+	public static Stats upload(String source, String destination, ADLStoreClient client, IfExists overwriteOption) throws InterruptedException {
 		RemoteCopy F = new RemoteCopy(client, overwriteOption);
 		return F.uploadInternal(source, destination);
 	}
@@ -46,7 +42,7 @@ public class RemoteCopy {
 	public static Stats download(String source, String destination, ADLStoreClient client, IfExists overwriteOption) {
 		RemoteCopy F = new RemoteCopy(client, overwriteOption);
 		DirectoryEntry entry = null;
-		Stats R = new Stats();
+		Stats stats = new Stats();
 		
 		try {
 			entry = client.getDirectoryEntry(source);
@@ -54,18 +50,19 @@ public class RemoteCopy {
 			log.error("Error collecting details of source from ADLS");
 			log.error(e.getMessage());
 			System.out.println("Unable to collect details of source: " + source + " from ADLS");
-			R.failedTransfers.add(source);
-			return R;
+			stats.failedTransfers.add(source);
+			return stats;
 		}
+
 		try {
-			R = F.download(entry, destination);
-		} catch (IOException | InterruptedException e) {
+			stats = F.download(entry, destination);
+		} catch (InterruptedException e) {
 			log.error(e.getMessage());
 		}
-		return R;
+		return stats;
 	}
 	
-	private Stats uploadInternal(String source, String destination) throws InterruptedException, IOException {
+	private Stats uploadInternal(String source, String destination) throws InterruptedException {
 		if(source == null) {
 			throw new IllegalArgumentException("source is null");
 		} else if(destination == null) {
@@ -122,7 +119,7 @@ public class RemoteCopy {
 		return t;
 	}
 	
-	private Stats download(DirectoryEntry source, String destination) throws IOException, InterruptedException {
+	private Stats download(DirectoryEntry source, String destination) throws InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
 		Thread statusThread = waitForCompletion(generateJob);
@@ -131,7 +128,7 @@ public class RemoteCopy {
 		return R;
 	}
 	
-	private Stats upload(File source, String destination) throws IOException, InterruptedException {
+	private Stats upload(File source, String destination) throws InterruptedException {
 		Thread generateJob = startEnumeration(source, destination);
 		startUploaderThreads(jobQ);
 		Thread statusThread = waitForCompletion(generateJob);
@@ -158,14 +155,14 @@ public class RemoteCopy {
 		return result;
 	}
 
-	private boolean verifyDestination(String dst) throws InterruptedException {
-		DirectoryEntry D = null;
+	private boolean verifyDestination(String dst) {
+		DirectoryEntry de = null;
 		try {
-			D = client.getDirectoryEntry(dst);
+			de = client.getDirectoryEntry(dst);
 		} catch (IOException e) {
 			log.debug("Destination directory doesn't exists, will be created");
 		}
-		if(D != null && D.type != DirectoryEntryType.DIRECTORY) {
+		if(de != null && de.type != DirectoryEntryType.DIRECTORY) {
 			log.error("Destination path points to a file");
 			throw new IllegalArgumentException("Destination path points to a file. Please provide a directory");
 		}

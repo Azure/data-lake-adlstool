@@ -1,12 +1,14 @@
 package com.microsoft.azure.datalake.store;
 
+import com.microsoft.azure.datalake.store.Job.JobType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.microsoft.azure.datalake.store.Job.JobType;;
+;
 /*
  * Enumerates the given Directory and populates the upload jobs
  */
@@ -70,7 +72,7 @@ class EnumerateFile implements Runnable {
 							lastEntry = dEntry.name;
 							metaDataQ.add(new MetaData(dEntry, dstPrefix));
 						}
-					} while(subDir.size() >= maxEntries);
+					} while(subDir.size() == maxEntries);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -144,7 +146,7 @@ class EnumerateFile implements Runnable {
 			offset += size;
 		} while(offset < totalLength);
 		bytesToTransmit += totalLength;
-		log.debug("Generated " + chunks + " number of downlaod jobs for size: " + totalLength);
+		log.debug("Generated " + chunks + " number of download jobs for size: " + totalLength);
 	}
 	
 	public long getBytesToTransmit() {

@@ -1,6 +1,6 @@
 package com.microsoft.azure.datalake.store;
 
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.Queue;
 
 class ProcessingQueue<T> {
@@ -8,7 +8,7 @@ class ProcessingQueue<T> {
     private int processorCount = 0;
     
     ProcessingQueue() {
-    	internalQueue = new LinkedList<T>();
+    	internalQueue = new ArrayDeque<>();
     }
 
     public synchronized void add(T item) {

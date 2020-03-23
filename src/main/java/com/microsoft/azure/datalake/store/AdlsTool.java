@@ -110,7 +110,6 @@ class AdlsTool {
     }
 
     private static Properties readPropertiesFile(String filename) throws IOException {
-        File f = new File(filename);
         FileInputStream instr = new FileInputStream(filename);
         Properties prop = new Properties();
         prop.load(instr);
@@ -176,6 +175,7 @@ class AdlsTool {
     }
 
     public static void usage(int exitCode) {
+        // TODO Add downloader info here.
         System.out.println();
         System.out.println("ADLS Java command-line tool");
         System.out.println("Usage:");

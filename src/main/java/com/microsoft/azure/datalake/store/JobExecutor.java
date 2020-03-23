@@ -1,39 +1,24 @@
 package com.microsoft.azure.datalake.store;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
+import com.microsoft.azure.datalake.store.Job.JobType;
+import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
-import java.io.Writer;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.microsoft.azure.datalake.store.ADLStoreClient;
-import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.IfExists;
-import com.microsoft.azure.datalake.store.Job.JobType;
-import com.microsoft.azure.datalake.store.retrypolicies.ExponentialBackoffPolicy;
-
 class JobExecutor implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("com.microsoft.azure.datalake.store.FileUploader");
-	final char fileSeparator = '/';
 	final int fourMB = 4 * 1024 * 1024;
 	final int bufSize = fourMB;
 	ConsumerQueue<Job> jobQ;
@@ -41,7 +26,7 @@ class JobExecutor implements Runnable {
 	Stats stats;
 	IfExists overwrite;
 	
-	static enum UploadStatus {
+	enum UploadStatus {
 		successful,
 		failed,
 		skipped
@@ -52,9 +37,9 @@ class JobExecutor implements Runnable {
 		int numberOfFailedUploads;
 		long totalTimeTakenInMilliSeconds = 0;
 		AtomicLong totalBytesTransmitted = new AtomicLong(0);
-		List<String> successfulTransfers = new LinkedList<String>();
-		List<String> failedTransfers = new LinkedList<>();
-		List<String> skippedTransfers = new LinkedList<>();
+		List<String> successfulTransfers = new ArrayList<>();
+		List<String> failedTransfers =new ArrayList<>();
+		List<String> skippedTransfers = new ArrayList<>();
 		
 		public void begin() {
 			totalTimeTakenInMilliSeconds = System.currentTimeMillis();
@@ -163,7 +148,7 @@ class JobExecutor implements Runnable {
 				RandomAccessFile fileStream = new RandomAccessFile(file, "rw")) {
 			stream.seek(job.offset);
 			fileStream.seek(job.offset);
-			byte[] data = new byte[4*1024*1024];
+			byte[] data = new byte[bufSize];
 			long totalBytesRead = 0, bytesRead;
 			while(totalBytesRead < job.size && (bytesRead = stream.read(data)) != -1) {
 				int write = (int) Math.min(bytesRead, job.size - totalBytesRead);
