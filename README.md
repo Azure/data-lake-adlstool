@@ -1,5 +1,6 @@
 # ADLS Java Tool
 
+For Adls Gen1
 To run the tool, Java 7 or above needs to be installed and available on PATH.
 
 To see usage, run the command "adlstool" and see usage information.
