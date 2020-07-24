@@ -94,7 +94,13 @@ To create a Service Principal from the Azure CLI 2.0, ensure that you have the C
 ```
 az login
 ```
-and complete the login with your credentials associated with the tenant in which you have the ADLS account, once you've successfully logged in run 
+and complete the login with your credentials associated with the tenant in which you have the ADLS account, once you've successfully logged in make sure you're using the same subscription as the one on which the target ADLS instance belongs to:
+
+```
+az account set --subscription <sub-id>
+```
+
+then run 
 
 ```
 az ad sp create-for-rbac -n <give it a name> --role owner
